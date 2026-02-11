@@ -44,7 +44,8 @@ export class GeminiClient {
       }
 
       if (i < retries) {
-        const waitTime = Math.pow(2, i) * 1000;
+        const waitTime = Math.pow(2, i) * 2000; // Increased base from 1000 to 2000
+        console.log(`Rate limited or error occurred. Waiting ${waitTime}ms before retry ${i + 1}...`);
         await this.delay(waitTime);
       }
     }

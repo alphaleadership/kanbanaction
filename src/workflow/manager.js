@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { delay } from '../utils/helpers.js';
 import { extractIssueData, detectIssueType } from '../github/issue-processor.js';
 import { createTask, addTaskToColumn, moveTask } from '../kanban/task-manager.js';
 import { readDb, writeDb } from '../kanban/file-operations.js';
@@ -105,6 +106,8 @@ export class WorkflowManager {
                 const nextAnalysis = await this.handleFileActions(analysis.fileActions, issueNumber, dialogue);
                 if (nextAnalysis) {
                     iterations++;
+                    console.log('Waiting 2 seconds before next iteration...');
+                    await delay(2000);
                     continue; 
                 }
             }
@@ -266,6 +269,8 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
         };
 
         processedCount++;
+        // Add a small delay between tasks to avoid 429
+        await delay(1000);
       }
     }
 
