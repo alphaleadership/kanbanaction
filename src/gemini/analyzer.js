@@ -1,23 +1,34 @@
 import { KANBAN_COLUMNS } from '../utils/constants.js';
+import { getProjectStructure } from '../utils/helpers.js';
 
 export class IssueAnalyzer {
   constructor(client) {
     this.client = client;
   }
 
-  async analyzeIssue(issueData) {
+  async analyzeIssue(issueData, history = []) {
     const maxBodyLength = 4000;
     const trimmedBody = (issueData.body || '').slice(0, maxBodyLength);
     const bodyWasTrimmed = (issueData.body || '').length > maxBodyLength;
     const preferredModel = (issueData.body || '').length > 8000 ? 'gemini-2.5-pro' : undefined;
 
+    const projectStructure = await getProjectStructure();
+    
+    const historyContext = history.length > 0 
+      ? `\nDialogue History:\n${history.map(h => `[${h.role}] ${JSON.stringify(h.content)}`).join('\n')}`
+      : '';
+
     const prompt = `
       Analyze the following GitHub issue and provide a structured JSON response.
+      ${historyContext}
       
       Issue Title: ${issueData.title}
       Issue Body: ${trimmedBody}
       ${bodyWasTrimmed ? 'Note: The body was truncated for performance. Prioritize key technical points.' : ''}
       Labels: ${issueData.labels.join(', ')}
+
+      Current Project Structure:
+      ${projectStructure}
       
       Requirements:
       1. Assess technical complexity (low, medium, high).
@@ -27,6 +38,10 @@ export class IssueAnalyzer {
       5. Identify if any information is missing (true/false) and list what's missing.
       6. Choose a representative emoji icon for the task.
       7. Choose a representative hex color code for the task (e.g. #FF5733).
+      8. If the issue implies reading or modifying files to understand or fix it, specify "fileActions".
+         - Use "read" to request content of a file.
+         - Use "write" to create/overwrite a file.
+         - Use "patch" to replace a specific block of text in a file.
       
       Return JSON format:
       {
@@ -39,7 +54,17 @@ export class IssueAnalyzer {
         "missingInformation": {
           "isMissing": false,
           "details": []
-        }
+        },
+        "fileActions": [
+          {
+            "action": "read|write|patch",
+            "path": "relative/path/to/file",
+            "content": "Full content for 'write' action",
+            "oldContent": "Exact block of text to find for 'patch' action",
+            "newContent": "Replacement text for 'patch' action",
+            "explanation": "Why this action is needed"
+          }
+        ]
       }
     `;
 

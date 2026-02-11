@@ -1,14 +1,80 @@
+import fs from 'fs/promises';
 import { extractIssueData, detectIssueType } from '../github/issue-processor.js';
 import { createTask, addTaskToColumn, moveTask } from '../kanban/task-manager.js';
 import { readDb, writeDb } from '../kanban/file-operations.js';
-import { COLUMN_MAPPING } from '../utils/constants.js';
+import { DialogueManager } from '../gemini/dialogue-manager.js';
+import * as ConstantsModule from '../utils/constants.js';
+
+const KANBAN_COLUMNS = ConstantsModule.KANBAN_COLUMNS;
+const COLUMN_MAPPING = ConstantsModule.COLUMN_MAPPING;
 
 export class WorkflowManager {
+  static KANBAN_COLUMNS = KANBAN_COLUMNS;
+  static COLUMN_MAPPING = COLUMN_MAPPING;
+
   constructor(githubClient, geminiClient, analyzer, branchManager) {
     this.githubClient = githubClient;
     this.geminiClient = geminiClient;
     this.analyzer = analyzer;
     this.branchManager = branchManager;
+    this.dialogueManager = new DialogueManager();
+  }
+
+  async handleFileActions(actions, issueNumber, dialogue) {
+    if (!actions || !actions.length) return null;
+
+    let readResults = [];
+    const processedActions = [];
+
+    for (const action of actions) {
+      console.log(`Executing file action: ${action.action} on ${action.path}...`);
+      
+      try {
+        if (action.action === 'read') {
+          const content = await fs.readFile(action.path, 'utf8');
+          readResults.push({ path: action.path, content });
+          processedActions.push({ ...action, status: 'success' });
+        } else if (action.action === 'write') {
+          await fs.writeFile(action.path, action.content, 'utf8');
+          await this.githubClient.commitFile(action.path, action.content, `fix: automatic update via Gemini for #${issueNumber}\n\n${action.explanation}`);
+          processedActions.push({ ...action, status: 'success' });
+        } else if (action.action === 'patch') {
+          let content = await fs.readFile(action.path, 'utf8');
+          // Normalize line endings to LF for consistent matching
+          const normalizedContent = content.replace(/\r\n/g, '\n');
+          const normalizedOld = action.oldContent.replace(/\r\n/g, '\n');
+          const normalizedNew = action.newContent.replace(/\r\n/g, '\n');
+
+          if (normalizedContent.includes(normalizedOld)) {
+            const updatedContent = normalizedContent.replace(normalizedOld, normalizedNew);
+            await fs.writeFile(action.path, updatedContent, 'utf8');
+            await this.githubClient.commitFile(action.path, updatedContent, `fix: patch applied via Gemini for #${issueNumber}\n\n${action.explanation}`);
+            processedActions.push({ ...action, status: 'success' });
+          } else {
+            throw new Error(`Could not find the exact 'oldContent' in ${action.path}. Please provide an exact match including indentation.`);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to execute action ${action.action} on ${action.path}:`, error.message);
+        processedActions.push({ ...action, status: 'error', error: error.message });
+      }
+    }
+
+    if (readResults.length > 0) {
+      this.dialogueManager.addEntry(dialogue, 'system', readResults, { type: 'file_read_results' });
+      await this.dialogueManager.saveDialogue(issueNumber, dialogue);
+      
+      console.log('Files read. Re-analyzing with new context...');
+      // Re-run analysis with context added to dialogue
+      // The analyzer will see the history in the dialogue if we pass it (to be implemented)
+      return await this.analyzer.analyzeIssue({
+          title: `Context Update #${issueNumber}`,
+          body: `I have read the requested files: ${readResults.map(r => r.path).join(', ')}. Please refine your analysis.`,
+          labels: []
+      });
+    }
+
+    return null;
   }
 
   async processGitHubIssue(issueNumber) {
@@ -18,15 +84,48 @@ export class WorkflowManager {
         // 1. Fetch issue
         const rawIssue = await this.githubClient.getIssue(issueNumber);
         const issueData = extractIssueData(rawIssue);
+
+        // Load dialogue context
+        let dialogue = await this.dialogueManager.loadDialogue(issueNumber);
+        this.dialogueManager.addEntry(dialogue, 'user', issueData, { event: 'issue_opened/labeled' });
         
-        // 2. AI Analysis
-        console.log('Analyzing issue with Gemini...');
-        const analysis = await this.analyzer.analyzeIssue(issueData);
+        // 2. AI Analysis (with Loop for file actions)
+        let analysis;
+        let iterations = 0;
+        const maxIterations = 3;
+
+        while (iterations < maxIterations) {
+            console.log(`Analyzing issue with Gemini (Iteration ${iterations + 1})...`);
+            analysis = await this.analyzer.analyzeIssue(issueData, dialogue.history);
+            
+            // Save analysis to dialogue
+            this.dialogueManager.addEntry(dialogue, 'assistant', analysis, { type: 'analysis', iteration: iterations });
+            
+            if (analysis.fileActions && analysis.fileActions.length > 0) {
+                const nextAnalysis = await this.handleFileActions(analysis.fileActions, issueNumber, dialogue);
+                if (nextAnalysis) {
+                    iterations++;
+                    continue; 
+                }
+            }
+            break;
+        }
         
+        await this.dialogueManager.saveDialogue(issueNumber, dialogue);
+
+        // Commit dialogue file to repo (so subsequent runs have context)
+        try {
+            const dialoguePath = this.dialogueManager.getRelativePath(issueNumber);
+            const dialogueContent = JSON.stringify(dialogue, null, 2);
+            await this.githubClient.commitFile(dialoguePath, dialogueContent, `docs: update dialogue context for #${issueNumber}`);
+        } catch (e) {
+            console.warn('Failed to commit dialogue file:', e.message);
+        }
+
         // 3. Update Kanban
         console.log('Updating Kanban board...');
         const db = await readDb();
-        const column = analysis.suggestedColumn || COLUMN_MAPPING[analysis.type] || 'idees';
+        const column = analysis.suggestedColumn || WorkflowManager.COLUMN_MAPPING[analysis.type] || 'idees';
         
         // Check if task already exists for this issue
         let task;
@@ -137,7 +236,7 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
   async processPendingTasks() {
     console.log('Scanning Kanban for pending tasks...');
     const db = await readDb();
-    const columnsToProcess = [KANBAN_COLUMNS.IDEES, KANBAN_COLUMNS.A_FAIRE];
+    const columnsToProcess = [WorkflowManager.KANBAN_COLUMNS.IDEES, WorkflowManager.KANBAN_COLUMNS.A_FAIRE];
     let processedCount = 0;
 
     for (const column of columnsToProcess) {
