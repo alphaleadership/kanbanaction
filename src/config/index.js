@@ -26,7 +26,7 @@ export function validateAndGetConfig(env = process.env) {
     const config = getConfig(env);
     
     const errors = [];
-    if (!config.geminiApiKey) errors.push("GEMINI_API_KEY is missing");
+    if (!config.installWorkflows && !config.geminiApiKey) errors.push("GEMINI_API_KEY is missing");
     if (!config.githubToken) errors.push("GITHUB_TOKEN is missing");
 
     if (errors.length > 0) {

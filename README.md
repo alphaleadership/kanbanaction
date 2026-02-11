@@ -64,8 +64,8 @@ Exécutez ce workflow manuellement une fois. Il créera deux fichiers :
 
 | Input | Description | Défaut |
 |-------|-------------|---------|
-| `gemini-api-key` | **Requis** Votre clé API Gemini | N/A |
-| `github-token` | **Requis** Token GitHub pour modifier le repo | N/A |
+| `gemini-api-key` | Votre clé API Gemini (**requise** sauf si `install-workflows: 'true'`) | N/A |
+| `github-token` | Token GitHub pour modifier le repo (**requis**) | N/A |
 | `install-workflows` | Si `true`, installe les workflows dans le repo | `false` |
 | `gemini-model` | Modèle IA principal à utiliser | `gemini-2.5-flash` |
 | `gemini-fallback-models` | Modèles de secours (séparés par des virgules) | N/A |

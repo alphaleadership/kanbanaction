@@ -2,8 +2,8 @@ name: 'Gemini Kanban Integration'
 description: 'Integrates Gemini AI with KanbanGemini to process GitHub issues'
 inputs:
   gemini-api-key:
-    description: 'API Key for Google Gemini'
-    required: true
+    description: 'API Key for Google Gemini (required unless install-workflows is true)'
+    required: false
   gemini-model:
     description: 'Primary Gemini model (e.g. gemini-2.5-flash)'
     required: false
@@ -14,8 +14,8 @@ inputs:
     description: 'Retry count for Gemini API calls'
     required: false
   github-token:
-    description: 'GitHub Token'
-    required: true
+    description: 'GitHub Token (required)'
+    required: false
   install-workflows:
     description: 'Whether to install or update the Kanban workflows in the target repository (default: false)'
     required: false
