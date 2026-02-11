@@ -1,10 +1,10 @@
-import { validateConfig } from '../utils/validators.js';
+import * as core from '@actions/core';
 
 export function getConfig(env = process.env) {
   const config = {
-    geminiApiKey: env.GEMINI_API_KEY,
-    githubToken: env.GITHUB_TOKEN,
-    debug: env.DEBUG === 'true',
+    geminiApiKey: core.getInput('gemini-api-key') || env.GEMINI_API_KEY,
+    githubToken: core.getInput('github-token') || env.GITHUB_TOKEN,
+    debug: core.getInput('debug') === 'true' || env.DEBUG === 'true',
     githubRepo: env.GITHUB_REPOSITORY,
     githubRef: env.GITHUB_REF
   };
