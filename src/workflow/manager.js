@@ -152,7 +152,38 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
 
   async installWorkflows() {
     const actionRepo = process.env.GITHUB_ACTION_REPOSITORY || 'alphaleadership/kanbanaction';
-    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1'; // Logic for versioning
+    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1';
+
+    const sharedSteps = `
+      - uses: actions/checkout@v4
+      - name: Checkout action source
+        uses: actions/checkout@v4
+        with:
+          repository: ${actionRepo}
+          ref: ${actionVersion}
+          path: .kanban-action
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: .kanban-action/package-lock.json
+      - name: Install action dependencies
+        run: npm ci
+        working-directory: .kanban-action
+      - name: Run Gemini Kanban Action
+        run: node action.js
+        working-directory: .kanban-action
+        env:
+          INPUT_GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
+          INPUT_GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: \${{ github.repository }}
+          GITHUB_REF: \${{ github.ref }}
+          GITHUB_EVENT_NAME: \${{ github.event_name }}
+          GITHUB_EVENT_PATH: \${{ github.event_path }}
+          GITHUB_ACTION_REPOSITORY: ${actionRepo}
+`;
 
     const workflows = [
       {
@@ -173,13 +204,7 @@ permissions:
 jobs:
   process-issue:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Gemini Kanban Action
-        uses: ${actionRepo}@main
-        with:
-          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+    steps:${sharedSteps}
 `
       },
       {
@@ -198,18 +223,12 @@ permissions:
 jobs:
   process-tasks:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Gemini Kanban Action
-        uses: ${actionRepo}@main
-        with:
-          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+    steps:${sharedSteps}
 `
       }
     ];
 
-    console.log(`Installing/Updating workflows using action: ${actionRepo}...`);
+    console.log(`Installing/Updating workflows using action: ${actionRepo}@${actionVersion}...`);
 
     for (const wf of workflows) {
       try {
