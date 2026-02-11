@@ -1,0 +1,9 @@
+feat: Add debug inputs and default GitHub token
+
+This commit introduces the following changes to action.yml:
+- The 'github-token' input is now marked as required and provides
+  '${{ github.token }}' as a default value if not explicitly set.
+  This ensures that a GitHub token is always available for the action.
+- A new 'Debug Inputs' step has been added before the main action run.
+  This step echoes the values of 'INPUT_GEMINI_API_KEY' and 'INPUT_GITHUB_TOKEN'
+  as environment variables, allowing for easier debugging of token transmission issues.

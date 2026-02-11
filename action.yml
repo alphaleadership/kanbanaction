@@ -40,8 +40,8 @@ runs:
 
     - name: Debug Inputs
       run: |
-        echo "INPUT_GEMINI_API_KEY: ${INPUT_GEMINI_API_KEY}"
-        echo "INPUT_GITHUB_TOKEN: ${INPUT_GITHUB_TOKEN}"
+        echo "gemini-api-key input: ${{ inputs.gemini-api-key }}"
+        echo "github-token input: ${{ inputs.github-token }}"
       shell: bash
 
     - name: Run action
