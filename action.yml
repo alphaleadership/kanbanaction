@@ -25,6 +25,10 @@ inputs:
     description: 'Enable debug logging'
     required: false
     default: 'false'
+  kanban-columns:
+    description: 'Comma-separated list of Kanban column names (e.g., 'Backlog,Todo,In Progress,Done')'
+    required: true
+    default: 'Todo,In Progress,Done'
 runs:
   using: 'composite'
   steps:
