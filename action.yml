@@ -15,7 +15,8 @@ inputs:
     required: false
   github-token:
     description: 'GitHub Token (required)'
-    required: false
+    required: true
+    default: ${{ github.token }}
   install-workflows:
     description: 'Whether to install or update the Kanban workflows in the target repository (default: false)'
     required: false
@@ -36,6 +37,12 @@ runs:
       run: npm ci
       shell: bash
       working-directory: ${{ github.action_path }}
+
+    - name: Debug Inputs
+      run: |
+        echo "INPUT_GEMINI_API_KEY: ${INPUT_GEMINI_API_KEY}"
+        echo "INPUT_GITHUB_TOKEN: ${INPUT_GITHUB_TOKEN}"
+      shell: bash
 
     - name: Run action
       run: node action.js
