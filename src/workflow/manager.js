@@ -139,6 +139,8 @@ ${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Informati
 on:
   issues:
     types: [opened, labeled]
+  pull_request:
+    types: [closed]
   workflow_dispatch:
 
 permissions:
@@ -194,6 +196,55 @@ jobs:
       } catch (error) {
         console.error(`Failed to install ${wf.path}:`, error.message);
       }
+    }
+  }
+
+  async processPullRequestMerge(prNumber) {
+    console.log(`Processing merged PR #${prNumber}...`);
+
+    try {
+      // 1. Fetch PR data to find linked issues
+      const pr = await this.githubClient.octokit.pulls.get({
+        owner: this.githubClient.owner,
+        repo: this.githubClient.repo,
+        pull_number: prNumber
+      });
+
+      const body = pr.data.body || '';
+      // Simple regex to find "closes #123" or "fixes #123"
+      const issueMatches = body.match(/(?:closes|fixes|resolves)\s+#(\d+)/gi);
+
+      if (!issueMatches) {
+        console.log('No linked issues found in PR description.');
+        return;
+      }
+
+      const db = await readDb();
+      let updated = false;
+
+      for (const match of issueMatches) {
+        const issueNumber = parseInt(match.match(/\d+/)[0]);
+        console.log(`Found linked issue #${issueNumber}. Moving task to 'termine'...`);
+
+        const existingTaskEntry = Object.values(db).flat().find(t => t.metadata && t.metadata.issueNumber === issueNumber);
+
+        if (existingTaskEntry) {
+          moveTask(db, existingTaskEntry.id, 'termine');
+          updated = true;
+          console.log(`Task #${existingTaskEntry.id} moved to 'termine'.`);
+        } else {
+          console.log(`No Kanban task found for issue #${issueNumber}.`);
+        }
+      }
+
+      if (updated) {
+        await writeDb(db);
+        const dbContent = JSON.stringify(db, null, 2);
+        await this.githubClient.commitFile('.kaia', dbContent, `docs: complete tasks from merged PR #${prNumber}`);
+      }
+    } catch (error) {
+      console.error(`Error processing merged PR #${prNumber}:`, error.message);
+      throw error;
     }
   }
 }

@@ -36,6 +36,9 @@ async function run() {
     if (context.eventName === 'issues' && (context.payload.action === 'opened' || context.payload.action === 'labeled')) {
       const issueNumber = context.payload.issue.number;
       await workflow.processGitHubIssue(issueNumber);
+    } else if (context.eventName === 'pull_request' && context.payload.action === 'closed' && context.payload.pull_request.merged) {
+      const prNumber = context.payload.pull_request.number;
+      await workflow.processPullRequestMerge(prNumber);
     } else if (context.eventName === 'workflow_dispatch' || context.eventName === 'schedule') {
       console.log(`Triggered by ${context.eventName}. Processing pending tasks...`);
       await workflow.processPendingTasks();
