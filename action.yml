@@ -20,6 +20,34 @@ inputs:
     description: 'Whether to install or update the Kanban workflows in the target repository (default: false)'
     required: false
     default: 'false'
+  debug:
+    description: 'Enable debug logging'
+    required: false
+    default: 'false'
 runs:
-  using: 'node20'
-  main: 'action.js'
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: ${{ github.action_path }}/package-lock.json
+
+    - name: Install action dependencies
+      run: npm ci
+      shell: bash
+      working-directory: ${{ github.action_path }}
+
+    - name: Run action
+      run: node action.js
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        INPUT_GEMINI_API_KEY: ${{ inputs.gemini-api-key }}
+        INPUT_GEMINI_MODEL: ${{ inputs.gemini-model }}
+        INPUT_GEMINI_FALLBACK_MODELS: ${{ inputs.gemini-fallback-models }}
+        INPUT_GEMINI_RETRIES: ${{ inputs.gemini-retries }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_INSTALL_WORKFLOWS: ${{ inputs.install-workflows }}
+        INPUT_DEBUG: ${{ inputs.debug }}
