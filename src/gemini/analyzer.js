@@ -1,4 +1,4 @@
-import { KANBAN_COLUMNS, COLUMN_MAPPING } from '../utils/constants.js';
+import { KANBAN_COLUMNS } from '../utils/constants.js';
 
 export class IssueAnalyzer {
   constructor(client) {
@@ -45,5 +45,37 @@ export class IssueAnalyzer {
 
     const analysis = await this.client.generateJson(prompt, undefined, { preferredModel });
     return analysis;
+  }
+
+  async generateClarificationDiscussion(issueData, missingDetails = []) {
+    if (!missingDetails.length) {
+      return {
+        summary: 'No blocking information is missing.',
+        questions: [],
+        requestedInputs: []
+      };
+    }
+
+    const prompt = `
+      You are preparing a follow-up discussion comment for a GitHub issue.
+
+      Issue title: ${issueData.title}
+      Issue body: ${(issueData.body || '').slice(0, 2000)}
+      Missing details identified by a previous analysis: ${missingDetails.join('; ')}
+
+      Produce a JSON response in French with:
+      - summary: one short sentence explaining why additional info is needed.
+      - questions: an array of 2 to 5 concrete clarification questions.
+      - requestedInputs: an array of concrete elements the user can provide (logs, reproduction steps, screenshots, design constraints, etc.).
+
+      Return JSON format:
+      {
+        "summary": "...",
+        "questions": ["..."],
+        "requestedInputs": ["..."]
+      }
+    `;
+
+    return this.client.generateJson(prompt);
   }
 }

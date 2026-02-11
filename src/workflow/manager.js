@@ -52,6 +52,22 @@ export class WorkflowManager {
         
         // 4. GitHub Feedback
         console.log('Adding comment and labels to GitHub...');
+        const missingDetails = analysis?.missingInformation?.details || [];
+        const isMissingInformation = Boolean(analysis?.missingInformation?.isMissing && missingDetails.length > 0);
+        const clarification = isMissingInformation
+          ? await this.analyzer.generateClarificationDiscussion(issueData, missingDetails)
+          : null;
+
+        const clarificationSummary = clarification?.summary
+          ? `\n${clarification.summary}`
+          : '';
+        const clarificationQuestions = clarification?.questions?.length
+          ? `\n\n**Questions pour avancer :**\n${clarification.questions.map(q => `- ${q}`).join('\n')}`
+          : '';
+        const clarificationInputs = clarification?.requestedInputs?.length
+          ? `\n\n**Éléments à fournir à Gemini :**\n${clarification.requestedInputs.map(i => `- ${i}`).join('\n')}`
+          : '';
+
         const commentBody = `
 ### ${analysis.icon || '📝'} Task Created: ${task.id}
 **Complexity:** ${analysis.complexity}
@@ -62,7 +78,8 @@ export class WorkflowManager {
 #### Acceptance Criteria:
 ${analysis.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n')}
 
-${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Information:**\n> ${analysis.missingInformation.details.join('\n> ')}` : ''}
+${isMissingInformation ? `\n> [!WARNING]\n> **Missing Information:**\n> ${missingDetails.join('\n> ')}` : ''}
+${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSummary}${clarificationQuestions}${clarificationInputs}` : ''}
     `;
         
         await this.githubClient.createComment(issueNumber, commentBody);
@@ -135,7 +152,36 @@ ${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Informati
 
   async installWorkflows() {
     const actionRepo = process.env.GITHUB_ACTION_REPOSITORY || 'alphaleadership/kanbanaction';
-    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1'; // Logic for versioning
+    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1';
+
+    const sharedSteps = `
+      - uses: actions/checkout@v4
+      - name: Checkout action source
+        uses: actions/checkout@v4
+        with:
+          repository: ${actionRepo}
+          ref: ${actionVersion}
+          path: .kanban-action
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install action dependencies
+        run: npm ci
+        working-directory: .kanban-action
+      - name: Run Gemini Kanban Action
+        run: node action.js
+        working-directory: .kanban-action
+        env:
+          INPUT_GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
+          INPUT_GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: \${{ github.repository }}
+          GITHUB_REF: \${{ github.ref }}
+          GITHUB_EVENT_NAME: \${{ github.event_name }}
+          GITHUB_EVENT_PATH: \${{ github.event_path }}
+          GITHUB_ACTION_REPOSITORY: ${actionRepo}
+`;
 
     const workflows = [
       {
@@ -156,13 +202,7 @@ permissions:
 jobs:
   process-issue:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Gemini Kanban Action
-        uses: ${actionRepo}@main
-        with:
-          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+    steps:${sharedSteps}
 `
       },
       {
@@ -181,18 +221,12 @@ permissions:
 jobs:
   process-tasks:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Run Gemini Kanban Action
-        uses: ${actionRepo}@main
-        with:
-          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+    steps:${sharedSteps}
 `
       }
     ];
 
-    console.log(`Installing/Updating workflows using action: ${actionRepo}...`);
+    console.log(`Installing/Updating workflows using action: ${actionRepo}@${actionVersion}...`);
 
     for (const wf of workflows) {
       try {
