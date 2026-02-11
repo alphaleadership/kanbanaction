@@ -6,6 +6,7 @@ describe('action metadata', () => {
     const actionYml = fs.readFileSync('action.yml', 'utf8');
 
     expect(actionYml).toContain("using: 'composite'");
+    expect(actionYml).toContain('Setup Node.js');
     expect(actionYml).toContain('Install action dependencies');
     expect(actionYml).toContain('run: npm ci');
     expect(actionYml).toContain('working-directory: ${{ github.action_path }}');

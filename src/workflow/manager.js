@@ -166,8 +166,6 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: .kanban-action/package-lock.json
       - name: Install action dependencies
         run: npm ci
         working-directory: .kanban-action

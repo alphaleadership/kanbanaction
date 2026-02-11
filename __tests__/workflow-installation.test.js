@@ -18,7 +18,6 @@ describe('WorkflowManager.installWorkflows', () => {
     expect(firstWorkflowContent).toContain('Checkout action source');
     expect(firstWorkflowContent).toContain('working-directory: .kanban-action');
     expect(firstWorkflowContent).toContain('run: npm ci');
-    expect(firstWorkflowContent).toContain('cache-dependency-path: .kanban-action/package-lock.json');
     expect(firstWorkflowContent).toContain('repository: alphaleadership/kanbanaction');
     expect(firstWorkflowContent).toContain('ref: main');
   });
