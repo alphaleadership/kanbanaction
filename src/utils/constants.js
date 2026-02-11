@@ -18,4 +18,10 @@ export const COLUMN_MAPPING = {
   [ISSUE_TYPES.QUESTION]: KANBAN_COLUMNS.IDEES
 };
 
+export const TYPE_STYLES = {
+  [ISSUE_TYPES.BUG]: { icon: '🐛', color: '#ff4d4f' },
+  [ISSUE_TYPES.FEATURE]: { icon: '✨', color: '#52c41a' },
+  [ISSUE_TYPES.QUESTION]: { icon: '❓', color: '#1890ff' }
+};
+
 export const DB_FILE_NAME = '.kaia';

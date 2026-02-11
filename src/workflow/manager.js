@@ -35,9 +35,11 @@ export class WorkflowManager {
         if (existingTaskEntry) {
             console.log(`Task already exists for issue #${issueNumber}. Moving to ${column}...`);
             task = existingTaskEntry;
+            task.icon = analysis.icon || task.icon;
+            task.color = analysis.color || task.color;
             moveTask(db, task.id, column);
         } else {
-            task = createTask(issueData.title, issueData.body, analysis.acceptanceCriteria, { issueNumber });
+            task = createTask(issueData.title, issueData.body, analysis.acceptanceCriteria, { issueNumber }, analysis.icon, analysis.color);
             addTaskToColumn(db, task, column);
         }
         
@@ -51,9 +53,10 @@ export class WorkflowManager {
         // 4. GitHub Feedback
         console.log('Adding comment and labels to GitHub...');
         const commentBody = `
-### Task Created: ${task.id}
+### ${analysis.icon || '📝'} Task Created: ${task.id}
 **Complexity:** ${analysis.complexity}
 **Type:** ${analysis.type}
+**Color:** \`${analysis.color}\`
 **Suggested Column:** ${column}
 
 #### Acceptance Criteria:
@@ -107,6 +110,8 @@ ${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Informati
         // Update task with AI findings
         task.description = task.description || '';
         task.criteres_acceptation = analysis.acceptanceCriteria;
+        task.icon = analysis.icon || task.icon;
+        task.color = analysis.color || task.color;
         task.metadata = {
           ...task.metadata,
           type: analysis.type,

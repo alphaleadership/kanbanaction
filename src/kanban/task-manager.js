@@ -7,11 +7,13 @@ export function getNextId(db) {
   return maxId + 1;
 }
 
-export function createTask(titre, description = '', criteres = [], metadata = {}) {
+export function createTask(titre, description = '', criteres = [], metadata = {}, icon = '', color = '') {
   return {
     id: null,
     titre,
     description,
+    icon,
+    color,
     criteres_acceptation: Array.isArray(criteres) ? criteres : [],
     metadata: metadata || {}
   };

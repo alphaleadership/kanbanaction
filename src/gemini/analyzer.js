@@ -25,6 +25,8 @@ export class IssueAnalyzer {
       3. Suggest a Kanban column (${Object.values(KANBAN_COLUMNS).join(', ')}).
       4. Generate at least 3 testable acceptance criteria.
       5. Identify if any information is missing (true/false) and list what's missing.
+      6. Choose a representative emoji icon for the task.
+      7. Choose a representative hex color code for the task (e.g. #FF5733).
       
       Return JSON format:
       {
@@ -32,6 +34,8 @@ export class IssueAnalyzer {
         "type": "bug|feature|question",
         "suggestedColumn": "...",
         "acceptanceCriteria": ["...", "...", "..."],
+        "icon": "...",
+        "color": "#...",
         "missingInformation": {
           "isMissing": false,
           "details": []
