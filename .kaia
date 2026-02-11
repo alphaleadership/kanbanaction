@@ -1,5 +1,19 @@
 {
-  "idees": [],
+  "idees": [
+    {
+      "id": 2,
+      "titre": "test action",
+      "description": "",
+      "criteres_acceptation": [
+        "The designated 'action' can be successfully initiated for testing purposes.",
+        "The test execution of the 'action' completes without critical errors or unexpected terminations.",
+        "The test run of the 'action' produces discernible output (e.g., logs, status, artifacts) that can be used for evaluation."
+      ],
+      "metadata": {
+        "issueNumber": 1
+      }
+    }
+  ],
   "a_faire": [],
   "en_cours": [],
   "en_revision": [],
