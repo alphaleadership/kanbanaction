@@ -76,17 +76,39 @@ export class GitHubClient {
       });
   }
 
-  async getLatestCommitSha(branch = 'main') {
+  async getDefaultBranch() {
+    const { data } = await this.octokit.repos.get({
+      owner: this.owner,
+      repo: this.repo
+    });
+    return data.default_branch;
+  }
+
+  async createPullRequest(title, body, head, base) {
+    const { data } = await this.octokit.pulls.create({
+      owner: this.owner,
+      repo: this.repo,
+      title,
+      body,
+      head,
+      base
+    });
+    return data;
+  }
+
+  async getLatestCommitSha(branch) {
+      const targetBranch = branch || await this.getDefaultBranch();
       const { data } = await this.octokit.repos.getBranch({
           owner: this.owner,
           repo: this.repo,
-          branch
+          branch: targetBranch
       });
       return data.commit.sha;
   }
   
-  async commitFile(filePath, content, message, branch = 'main') {
-      const sha = await this.getLatestCommitSha(branch);
+  async commitFile(filePath, content, message, branch) {
+      const targetBranch = branch || await this.getDefaultBranch();
+      const sha = await this.getLatestCommitSha(targetBranch);
       const { data: commit } = await this.octokit.git.getCommit({
           owner: this.owner,
           repo: this.repo,
@@ -113,7 +135,7 @@ export class GitHubClient {
       });
 
       const newCommit = await this.createCommit(message, tree.sha, [sha]);
-      await this.updateRef(branch, newCommit.sha);
+      await this.updateRef(targetBranch, newCommit.sha);
       return newCommit;
   }
 }
