@@ -1,5 +1,5 @@
 import { extractIssueData, detectIssueType } from '../github/issue-processor.js';
-import { createTask, addTaskToColumn } from '../kanban/task-manager.js';
+import { createTask, addTaskToColumn, moveTask } from '../kanban/task-manager.js';
 import { readDb, writeDb } from '../kanban/file-operations.js';
 import { COLUMN_MAPPING } from '../utils/constants.js';
 
@@ -81,6 +81,119 @@ ${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Informati
             console.error('Failed to post error comment to GitHub:', e.message);
         }
         throw error;
+    }
+  }
+
+  async processPendingTasks() {
+    console.log('Scanning Kanban for pending tasks...');
+    const db = await readDb();
+    const columnsToProcess = ['idees', 'todo'];
+    let processedCount = 0;
+
+    for (const column of columnsToProcess) {
+      const tasks = db[column] || [];
+      for (const task of tasks) {
+        // Skip if already has an issue or was recently analyzed
+        if (task.metadata && task.metadata.issueNumber) continue;
+        
+        console.log(`Processing pending task #${task.id}: ${task.titre}...`);
+        
+        // Use AI to refine task
+        const analysis = await this.analyzer.analyzeIssue({
+          title: task.titre,
+          body: task.description || ''
+        });
+
+        // Update task with AI findings
+        task.description = task.description || '';
+        task.criteres_acceptation = analysis.acceptanceCriteria;
+        task.metadata = {
+          ...task.metadata,
+          type: analysis.type,
+          complexity: analysis.complexity,
+          lastAnalyzed: new Date().toISOString()
+        };
+
+        processedCount++;
+      }
+    }
+
+    if (processedCount > 0) {
+      await writeDb(db);
+      const dbContent = JSON.stringify(db, null, 2);
+      await this.githubClient.commitFile('.kaia', dbContent, `docs: refine ${processedCount} pending tasks via Gemini`);
+      console.log(`Refined ${processedCount} tasks.`);
+    } else {
+      console.log('No pending tasks to process.');
+    }
+  }
+
+  async installWorkflows() {
+    const actionRepo = process.env.GITHUB_ACTION_REPOSITORY || 'alphaleadership/kanbanaction';
+    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1'; // Logic for versioning
+
+    const workflows = [
+      {
+        path: '.github/workflows/gemini-kanban.yml',
+        content: `name: Gemini Kanban Integration
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  process-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gemini Kanban Action
+        uses: ${actionRepo}@main
+        with:
+          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
+          github-token: \${{ secrets.GITHUB_TOKEN }}
+`
+      },
+      {
+        path: '.github/workflows/process-pending-tasks.yml',
+        content: `name: Process Pending Tasks
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  process-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Gemini Kanban Action
+        uses: ${actionRepo}@main
+        with:
+          gemini-api-key: \${{ secrets.GEMINI_API_KEY }}
+          github-token: \${{ secrets.GITHUB_TOKEN }}
+`
+      }
+    ];
+
+    console.log(`Installing/Updating workflows using action: ${actionRepo}...`);
+
+    for (const wf of workflows) {
+      try {
+        await this.githubClient.commitFile(wf.path, wf.content, `ci: install/update ${wf.path}`);
+        console.log(`Successfully installed ${wf.path}`);
+      } catch (error) {
+        console.error(`Failed to install ${wf.path}:`, error.message);
+      }
     }
   }
 }

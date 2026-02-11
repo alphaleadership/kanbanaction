@@ -1,31 +1,66 @@
-# KanbanGemini
+# 🤖 Gemini Kanban Integration
 
-Système Kanban intégré avec GitHub et Gemini AI.
+Transformez vos GitHub Issues en tâches Kanban intelligentes grâce à la puissance de Google Gemini AI.
 
-## Configuration GitHub Action
+Cette GitHub Action automatise la gestion de votre tableau de bord Kanban (`.kaia`) en analysant vos issues, en suggérant des critères d'acceptation et en organisant vos tâches.
 
-Pour activer l'intégration Gemini :
+## 🚀 Fonctionnalités
 
-1.  Ajoutez le secret `GEMINI_API_KEY` dans les paramètres de votre dépôt GitHub (Settings > Secrets and variables > Actions).
-2.  L'action se déclenchera automatiquement lors de la création d'une issue ou l'ajout d'un label.
+- **Analyse IA :** Gemini analyse le titre et la description de vos issues pour déterminer leur type (bug, feature, etc.) et leur complexité.
+- **Gestion de Bord automatique :** Mise à jour automatique du fichier `.kaia` (votre base de données Kanban).
+- **Auto-Installation :** Capacité de l'action à installer ses propres workflows de maintenance.
+- **Traitement par Lots :** Un workflow programmé affine les tâches en attente qui n'ont pas encore été traitées par l'IA.
+- **Rapport d'Erreurs Centralisé :** Les erreurs d'exécution sont rapportées sur le dépôt principal de l'action pour un débogage facilité.
 
-### Réglages recommandés (performance + choix des modèles)
+## 🛠️ Configuration Rapide
 
-Vous pouvez aussi configurer ces variables/inputs optionnels pour améliorer la latence et la robustesse :
+### 1. Obtenir une clé API Gemini
+Créez une clé API sur le [Google AI Studio](https://aistudio.google.com/).
 
-- `GEMINI_MODEL` : modèle principal (défaut : `gemini-2.5-flash`).
-- `GEMINI_FALLBACK_MODELS` : modèles de secours séparés par des virgules.
-- `GEMINI_RETRIES` : nombre de tentatives en cas d'erreur API.
+### 2. Ajouter les Secrets
+Dans votre dépôt GitHub, allez dans **Settings > Secrets and variables > Actions** et ajoutez :
+- `GEMINI_API_KEY` : Votre clé API Google Gemini.
+- `GITHUB_TOKEN` : (Optionnel) Le token GitHub par défaut `${{ secrets.GITHUB_TOKEN }}` suffit généralement.
 
-Exemple :
+### 3. Installation Automatique
+Créez un fichier `.github/workflows/setup-kanban.yml` pour initialiser les workflows nécessaires :
 
-```txt
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_FALLBACK_MODELS=gemini-2.5-pro
-GEMINI_RETRIES=2
+```yaml
+name: Setup Gemini Kanban
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Kanban Workflows
+        uses: alphaleadership/kanbanaction@main
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          install-workflows: 'true'
 ```
 
-## Architecture
+Exécutez ce workflow manuellement une fois. Il créera deux fichiers :
+1. `.github/workflows/gemini-kanban.yml` : S'exécute à chaque nouvelle issue.
+2. `.github/workflows/process-pending-tasks.yml` : S'exécute chaque nuit pour traiter les tâches manuelles du Kanban.
 
-Le projet suit l'architecture définie dans `.kiro/specs`.
-L'action principale est définie dans `action.yml` et exécutée via le workflow `.github/workflows/gemini-kanban.yml`.
+## 📖 Utilisation
+
+- **Issues :** Créez une issue ou ajoutez un label. L'IA commentera l'issue avec une analyse complète et ajoutera la tâche au Kanban.
+- **Tâches en attente :** Si vous ajoutez manuellement des tâches dans votre fichier `.kaia` sans passer par une issue, le workflow nocturne les enrichira automatiquement avec des critères d'acceptation.
+
+## ⚙️ Paramètres Avancés
+
+| Input | Description | Défaut |
+|-------|-------------|---------|
+| `gemini-api-key` | **Requis** Votre clé API Gemini | N/A |
+| `github-token` | **Requis** Token GitHub pour modifier le repo | N/A |
+| `install-workflows` | Si `true`, installe les workflows dans le repo | `false` |
+| `gemini-model` | Modèle IA principal à utiliser | `gemini-2.5-flash` |
+| `gemini-fallback-models` | Modèles de secours (séparés par des virgules) | N/A |
+
+## 🛡️ Support
+Les erreurs critiques rencontrées par l'action sont automatiquement signalées sur [alphaleadership/kanbanaction](https://github.com/alphaleadership/kanbanaction/issues).

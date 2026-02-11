@@ -96,6 +96,17 @@ export class GitHubClient {
     return data;
   }
 
+  async createIssue(title, body, labels = []) {
+    const { data } = await this.octokit.issues.create({
+      owner: this.owner,
+      repo: this.repo,
+      title,
+      body,
+      labels
+    });
+    return data;
+  }
+
   async getLatestCommitSha(branch) {
       const targetBranch = branch || await this.getDefaultBranch();
       const { data } = await this.octokit.repos.getBranch({

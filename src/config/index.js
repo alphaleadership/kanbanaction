@@ -13,6 +13,7 @@ export function getConfig(env = process.env) {
       .filter(Boolean),
     geminiRetries: Number.isNaN(parsedRetries) || parsedRetries < 0 ? 3 : parsedRetries,
     githubToken: core.getInput('github-token') || env.GITHUB_TOKEN,
+    installWorkflows: core.getInput('install-workflows') === 'true' || env.INSTALL_WORKFLOWS === 'true',
     debug: core.getInput('debug') === 'true' || env.DEBUG === 'true',
     githubRepo: env.GITHUB_REPOSITORY,
     githubRef: env.GITHUB_REF
