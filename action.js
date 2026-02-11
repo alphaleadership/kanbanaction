@@ -19,7 +19,7 @@ async function run() {
         console.log('Context:', JSON.stringify(github.context, null, 2));
     }
 
-    const githubClient = new GitHubClient(config.githubToken, config.githubRepo, config.debug);
+    const githubClient = new GitHubClient(config.githubToken, config.githubRepo);
 
     if (config.installWorkflows) {
       const workflowInstaller = new WorkflowManager(githubClient, null, null, null);
