@@ -4,6 +4,15 @@ inputs:
   gemini-api-key:
     description: 'API Key for Google Gemini'
     required: true
+  gemini-model:
+    description: 'Primary Gemini model (e.g. gemini-2.5-flash)'
+    required: false
+  gemini-fallback-models:
+    description: 'Comma-separated fallback Gemini models'
+    required: false
+  gemini-retries:
+    description: 'Retry count for Gemini API calls'
+    required: false
   github-token:
     description: 'GitHub Token'
     required: true

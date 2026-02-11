@@ -6,11 +6,17 @@ export class IssueAnalyzer {
   }
 
   async analyzeIssue(issueData) {
+    const maxBodyLength = 4000;
+    const trimmedBody = (issueData.body || '').slice(0, maxBodyLength);
+    const bodyWasTrimmed = (issueData.body || '').length > maxBodyLength;
+    const preferredModel = (issueData.body || '').length > 8000 ? 'gemini-2.5-pro' : undefined;
+
     const prompt = `
       Analyze the following GitHub issue and provide a structured JSON response.
       
       Issue Title: ${issueData.title}
-      Issue Body: ${issueData.body}
+      Issue Body: ${trimmedBody}
+      ${bodyWasTrimmed ? 'Note: The body was truncated for performance. Prioritize key technical points.' : ''}
       Labels: ${issueData.labels.join(', ')}
       
       Requirements:
@@ -33,7 +39,7 @@ export class IssueAnalyzer {
       }
     `;
 
-    const analysis = await this.client.generateJson(prompt);
+    const analysis = await this.client.generateJson(prompt, undefined, { preferredModel });
     return analysis;
   }
 }
