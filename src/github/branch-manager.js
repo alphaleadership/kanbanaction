@@ -12,7 +12,7 @@ export class BranchManager {
     this.client = client;
   }
 
-  async createBranchForTask(taskId, title, fromBranch = 'main') {
+  async createBranchForTask(taskId, title, fromBranch = 'master') {
     const branchName = generateBranchName(taskId, title);
     try {
         const baseSha = await this.client.getLatestCommitSha(fromBranch);
@@ -26,7 +26,7 @@ export class BranchManager {
     }
   }
 
-  async createPRForTask(taskId, title, branchName, base = 'main') {
+  async createPRForTask(taskId, title, branchName, base = 'master') {
       const prTitle = `Task ${taskId}: ${title}`;
       const prBody = `Closes issue related to task ${taskId}. Automatically created by Gemini Kanban.`;
       return await this.client.createPullRequest(prTitle, prBody, branchName, base);
