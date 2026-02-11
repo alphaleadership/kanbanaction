@@ -52,6 +52,22 @@ export class WorkflowManager {
         
         // 4. GitHub Feedback
         console.log('Adding comment and labels to GitHub...');
+        const missingDetails = analysis?.missingInformation?.details || [];
+        const isMissingInformation = Boolean(analysis?.missingInformation?.isMissing && missingDetails.length > 0);
+        const clarification = isMissingInformation
+          ? await this.analyzer.generateClarificationDiscussion(issueData, missingDetails)
+          : null;
+
+        const clarificationSummary = clarification?.summary
+          ? `\n${clarification.summary}`
+          : '';
+        const clarificationQuestions = clarification?.questions?.length
+          ? `\n\n**Questions pour avancer :**\n${clarification.questions.map(q => `- ${q}`).join('\n')}`
+          : '';
+        const clarificationInputs = clarification?.requestedInputs?.length
+          ? `\n\n**Éléments à fournir à Gemini :**\n${clarification.requestedInputs.map(i => `- ${i}`).join('\n')}`
+          : '';
+
         const commentBody = `
 ### ${analysis.icon || '📝'} Task Created: ${task.id}
 **Complexity:** ${analysis.complexity}
@@ -62,7 +78,8 @@ export class WorkflowManager {
 #### Acceptance Criteria:
 ${analysis.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n')}
 
-${analysis.missingInformation.isMissing ? `\n> [!WARNING]\n> **Missing Information:**\n> ${analysis.missingInformation.details.join('\n> ')}` : ''}
+${isMissingInformation ? `\n> [!WARNING]\n> **Missing Information:**\n> ${missingDetails.join('\n> ')}` : ''}
+${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSummary}${clarificationQuestions}${clarificationInputs}` : ''}
     `;
         
         await this.githubClient.createComment(issueNumber, commentBody);
