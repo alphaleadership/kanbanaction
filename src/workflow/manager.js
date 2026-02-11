@@ -18,10 +18,16 @@ export class WorkflowManager {
         // 1. Fetch issue
         const rawIssue = await this.githubClient.getIssue(issueNumber);
         const issueData = extractIssueData(rawIssue);
+        if (this.githubClient.debug) {
+            console.log('DEBUG: Issue Data extracted:', JSON.stringify(issueData, null, 2));
+        }
         
         // 2. AI Analysis
         console.log('Analyzing issue with Gemini...');
         const analysis = await this.analyzer.analyzeIssue(issueData);
+        if (this.githubClient.debug) {
+            console.log('DEBUG: Gemini Analysis result:', JSON.stringify(analysis, null, 2));
+        }
         
         // 3. Update Kanban
         console.log('Updating Kanban board...');
@@ -42,7 +48,11 @@ export class WorkflowManager {
             task = createTask(issueData.title, issueData.body, analysis.acceptanceCriteria, { issueNumber }, analysis.icon, analysis.color);
             addTaskToColumn(db, task, column);
         }
-        
+        if (this.githubClient.debug) {
+            console.log('DEBUG: Task object created/updated:', JSON.stringify(task, null, 2));
+            console.log('DEBUG: Task assigned to column:', column);
+        }
+                
         await writeDb(db);
         
         // Commit changes to repository
@@ -137,14 +147,28 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
   async processPendingTasks() {
     console.log('Scanning Kanban for pending tasks...');
     const db = await readDb();
+    if (this.githubClient.debug) {
+      console.log('DEBUG: Full Kanban DB content:', JSON.stringify(db, null, 2));
+    }
     const columnsToProcess = ['idees', 'todo'];
+    if (this.githubClient.debug) {
+      console.log('DEBUG: Columns to process:', columnsToProcess);
+    }
     let processedCount = 0;
 
     for (const column of columnsToProcess) {
       const tasks = db[column] || [];
       for (const task of tasks) {
+        if (this.githubClient.debug) {
+            console.log(`DEBUG: Checking task #${task.id}: ${task.titre}`);
+        }
         // Skip if already has an issue or was recently analyzed
-        if (task.metadata && task.metadata.issueNumber) continue;
+        if (task.metadata && task.metadata.issueNumber) {
+            if (this.githubClient.debug) {
+                console.log(`DEBUG: Skipping task #${task.id} because it has an associated issue number: ${task.metadata.issueNumber}`);
+            }
+            continue;
+        }
         
         console.log(`Processing pending task #${task.id}: ${task.titre}...`);
         
@@ -153,6 +177,9 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
           title: task.titre,
           body: task.description || ''
         });
+        if (this.githubClient.debug) {
+          console.log(`DEBUG: Gemini analysis for task #${task.id}:`, JSON.stringify(analysis, null, 2));
+        }
 
         // Update task with AI findings
         task.description = task.description || '';
