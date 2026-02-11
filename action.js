@@ -17,11 +17,9 @@ async function run() {
     if (config.debug) {
         console.log('Debug mode enabled');
         console.log('Context:', JSON.stringify(github.context, null, 2));
-        console.log('DEBUG: config.geminiApiKey =', config.geminiApiKey ? '***' : 'EMPTY');
-        console.log('DEBUG: config.githubToken =', config.githubToken ? '***' : 'EMPTY');
     }
 
-    const githubClient = new GitHubClient(config.githubToken, config.githubRepo);
+    const githubClient = new GitHubClient(config.githubToken, config.githubRepo, config.debug);
 
     if (config.installWorkflows) {
       const workflowInstaller = new WorkflowManager(githubClient, null, null, null);
@@ -54,9 +52,12 @@ async function run() {
       console.log(`Event ${context.eventName} with action ${context.payload.action} is not handled.`);
     }
 
-  } catch (error) {
-    core.setFailed(error.message);
-
+      } catch (error) {
+        core.setFailed(error.message);
+        if (config?.debug) {
+          console.error('Detailed Error:', error);
+          console.error('Error Stack:', error.stack);
+        }
     if (!config?.githubToken) {
       console.error('Skipping centralized error report because no GitHub token is configured.');
       return;

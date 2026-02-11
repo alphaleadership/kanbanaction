@@ -1,11 +1,12 @@
 import { Octokit } from '@octokit/rest';
 
 export class GitHubClient {
-  constructor(token, repoPath) {
+  constructor(token, repoPath, debug = false) {
     this.octokit = new Octokit({ auth: token });
     const [owner, repo] = repoPath.split('/');
     this.owner = owner;
     this.repo = repo;
+    this.debug = debug;
   }
 
   async getIssue(issueNumber) {

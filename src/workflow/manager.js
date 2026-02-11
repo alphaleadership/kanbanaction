@@ -82,7 +82,37 @@ ${isMissingInformation ? `\n> [!WARNING]\n> **Missing Information:**\n> ${missin
 ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSummary}${clarificationQuestions}${clarificationInputs}` : ''}
     `;
         
-        await this.githubClient.createComment(issueNumber, commentBody);
+        
+        try {
+            if (this.githubClient.debug) {
+                console.log('Attempting to create comment on GitHub issue...');
+            }
+            await this.githubClient.createComment(issueNumber, commentBody);
+            if (this.githubClient.debug) {
+                console.log('Successfully created comment on GitHub issue.');
+            }
+        } catch (commentError) {
+            console.error(`Error creating comment on issue #${issueNumber}:`, commentError.message);
+            if (this.githubClient.debug) {
+                console.error('Comment Error Stack:', commentError.stack);
+            }
+        }
+
+        try {
+            if (this.githubClient.debug) {
+                console.log('Attempting to add labels to GitHub issue...');
+            }
+            await this.githubClient.addLabels(issueNumber, [analysis.type, `complexity:${analysis.complexity}`]);
+            if (this.githubClient.debug) {
+                console.log('Successfully added labels to GitHub issue.');
+            }
+        } catch (labelError) {
+            console.error(`Error adding labels to issue #${issueNumber}:`, labelError.message);
+            if (this.githubClient.debug) {
+                console.error('Label Error Stack:', labelError.stack);
+            }
+        }
+        
         await this.githubClient.addLabels(issueNumber, [analysis.type, `complexity:${analysis.complexity}`]);
 
         // 5. Branch Creation (if en_cours)
