@@ -20,7 +20,10 @@ Créez une clé API sur le [Google AI Studio](https://aistudio.google.com/).
 ### 2. Ajouter les Secrets
 Dans votre dépôt GitHub, allez dans **Settings > Secrets and variables > Actions** et ajoutez :
 - `GEMINI_API_KEY` : Votre clé API Google Gemini.
-- `GITHUB_TOKEN` : (Optionnel) Le token GitHub par défaut `${{ secrets.GITHUB_TOKEN }}` suffit généralement.
+- `GH_PAT` : (Requis pour l'auto-installation) Un Personal Access Token avec les scopes `repo` et `workflow`.
+
+> [!IMPORTANT]
+> Le `GITHUB_TOKEN` par défaut ne peut pas créer ou modifier des fichiers dans `.github/workflows/`. Pour utiliser `install-workflows: 'true'`, vous devez utiliser un **PAT**.
 
 ### 3. Installation Automatique
 Créez un fichier `.github/workflows/setup-kanban.yml` pour initialiser les workflows nécessaires :
@@ -29,6 +32,11 @@ Créez un fichier `.github/workflows/setup-kanban.yml` pour initialiser les work
 name: Setup Gemini Kanban
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   setup:
@@ -39,7 +47,7 @@ jobs:
         uses: alphaleadership/kanbanaction@main
         with:
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PAT }} # Utilisez un PAT ici
           install-workflows: 'true'
 ```
 

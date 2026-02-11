@@ -199,7 +199,11 @@ jobs:
         await this.githubClient.commitFile(wf.path, wf.content, `ci: install/update ${wf.path}`);
         console.log(`Successfully installed ${wf.path}`);
       } catch (error) {
-        console.error(`Failed to install ${wf.path}:`, error.message);
+        let message = error.message;
+        if (error.status === 403 || error.status === 404) {
+          message += " (Hint: The default GITHUB_TOKEN cannot modify workflow files. Ensure you are using a Personal Access Token (PAT) with 'workflow' scope.)";
+        }
+        console.error(`Failed to install ${wf.path}:`, message);
       }
     }
   }
