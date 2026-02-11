@@ -31,11 +31,14 @@ describe('Property 5: Configuration Processing', () => {
           fc.property(
               fc.record({
                 GEMINI_API_KEY: fc.option(fc.string(), { nil: true }),
-                GITHUB_TOKEN: fc.option(fc.string(), { nil: true })
+                GITHUB_TOKEN: fc.option(fc.string(), { nil: true }),
+                INSTALL_WORKFLOWS: fc.boolean().map(b => b ? 'true' : 'false')
               }),
               (env) => {
-                  // Only run if at least one is missing
-                  if (!env.GEMINI_API_KEY || !env.GITHUB_TOKEN) {
+                  const requiresGemini = env.INSTALL_WORKFLOWS !== 'true';
+                  const hasMissingRequiredKey = !env.GITHUB_TOKEN || (requiresGemini && !env.GEMINI_API_KEY);
+
+                  if (hasMissingRequiredKey) {
                       try {
                           validateAndGetConfig(env);
                           return false; // Should have thrown
@@ -43,7 +46,7 @@ describe('Property 5: Configuration Processing', () => {
                           return true;
                       }
                   }
-                  return true; // Both present, skip this check
+                  return true; // Required keys present, skip this check
               }
           )
       );

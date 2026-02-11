@@ -8,16 +8,26 @@ import { BranchManager } from './src/github/branch-manager.js';
 import { WorkflowManager } from './src/workflow/manager.js';
 
 async function run() {
-  const config = validateAndGetConfig();
+  let config;
   const CENTRAL_REPO = 'alphaleadership/kanbanaction';
 
   try {
+    config = validateAndGetConfig();
+
     if (config.debug) {
         console.log('Debug mode enabled');
         console.log('Context:', JSON.stringify(github.context, null, 2));
     }
 
     const githubClient = new GitHubClient(config.githubToken, config.githubRepo);
+
+    if (config.installWorkflows) {
+      const workflowInstaller = new WorkflowManager(githubClient, null, null, null);
+      await workflowInstaller.installWorkflows();
+      console.log('Workflow installation completed. Skipping event processing.');
+      return;
+    }
+
     const geminiClient = new GeminiClient(config.geminiApiKey, {
       primaryModel: config.geminiModel,
       fallbackModels: config.geminiFallbackModels,
@@ -26,10 +36,6 @@ async function run() {
     const analyzer = new IssueAnalyzer(geminiClient);
     const branchManager = new BranchManager(githubClient);
     const workflow = new WorkflowManager(githubClient, geminiClient, analyzer, branchManager);
-
-    if (config.installWorkflows) {
-      await workflow.installWorkflows();
-    }
 
     const context = github.context;
     
@@ -48,6 +54,11 @@ async function run() {
 
   } catch (error) {
     core.setFailed(error.message);
+
+    if (!config?.githubToken) {
+      console.error('Skipping centralized error report because no GitHub token is configured.');
+      return;
+    }
     
     try {
       console.log(`Reporting error to central repository: ${CENTRAL_REPO}`);
