@@ -17,7 +17,11 @@ async function run() {
     }
 
     const githubClient = new GitHubClient(config.githubToken, config.githubRepo);
-    const geminiClient = new GeminiClient(config.geminiApiKey);
+    const geminiClient = new GeminiClient(config.geminiApiKey, {
+      primaryModel: config.geminiModel,
+      fallbackModels: config.geminiFallbackModels,
+      retries: config.geminiRetries
+    });
     const analyzer = new IssueAnalyzer(geminiClient);
     const branchManager = new BranchManager(githubClient);
     const workflow = new WorkflowManager(githubClient, geminiClient, analyzer, branchManager);

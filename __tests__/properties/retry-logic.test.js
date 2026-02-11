@@ -12,10 +12,12 @@ describe('Property 7: Retry Logic Behavior', () => {
         fc.integer({ min: 0, max: 5 }), // actual failures
         fc.integer({ min: 1, max: 3 }), // allowed retries
         async (failCount, allowedRetries) => {
-          const client = new GeminiClient(apiKey, 'gemini-1.5-flash', mockDelay);
+          const client = new GeminiClient(apiKey, 'gemini-2.5-flash', mockDelay);
+          const mockModel = { generateContent: jest.fn() };
+          client.getModel = jest.fn(() => mockModel);
           
           let callCount = 0;
-          client.model.generateContent = jest.fn().mockImplementation(() => {
+          mockModel.generateContent.mockImplementation(() => {
             callCount++;
             if (callCount <= failCount) {
               throw new Error('API Error');

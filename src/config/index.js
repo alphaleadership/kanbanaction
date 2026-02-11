@@ -1,8 +1,17 @@
 import * as core from '@actions/core';
 
 export function getConfig(env = process.env) {
+  const configuredFallbackModels = core.getInput('gemini-fallback-models') || env.GEMINI_FALLBACK_MODELS || '';
+  const parsedRetries = Number.parseInt(core.getInput('gemini-retries') || env.GEMINI_RETRIES || '3', 10);
+
   const config = {
     geminiApiKey: core.getInput('gemini-api-key') || env.GEMINI_API_KEY,
+    geminiModel: core.getInput('gemini-model') || env.GEMINI_MODEL || 'gemini-2.5-flash',
+    geminiFallbackModels: configuredFallbackModels
+      .split(',')
+      .map(model => model.trim())
+      .filter(Boolean),
+    geminiRetries: Number.isNaN(parsedRetries) || parsedRetries < 0 ? 3 : parsedRetries,
     githubToken: core.getInput('github-token') || env.GITHUB_TOKEN,
     debug: core.getInput('debug') === 'true' || env.DEBUG === 'true',
     githubRepo: env.GITHUB_REPOSITORY,
