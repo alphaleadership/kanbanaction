@@ -17,6 +17,8 @@ async function run() {
     if (config.debug) {
         console.log('Debug mode enabled');
         console.log('Context:', JSON.stringify(github.context, null, 2));
+        console.log('DEBUG: config.geminiApiKey =', config.geminiApiKey ? '***' : 'EMPTY');
+        console.log('DEBUG: config.githubToken =', config.githubToken ? '***' : 'EMPTY');
     }
 
     const githubClient = new GitHubClient(config.githubToken, config.githubRepo);

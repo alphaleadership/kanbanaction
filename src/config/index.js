@@ -5,14 +5,14 @@ export function getConfig(env = process.env) {
   const parsedRetries = Number.parseInt(core.getInput('gemini-retries') || env.GEMINI_RETRIES || '3', 10);
 
   const config = {
-    geminiApiKey: core.getInput('gemini-api-key') || env.GEMINI_API_KEY,
+    geminiApiKey: env.INPUT_GEMINI_API_KEY || core.getInput('gemini-api-key') || env.GEMINI_API_KEY,
     geminiModel: core.getInput('gemini-model') || env.GEMINI_MODEL || 'gemini-2.5-flash',
     geminiFallbackModels: configuredFallbackModels
       .split(',')
       .map(model => model.trim())
       .filter(Boolean),
     geminiRetries: Number.isNaN(parsedRetries) || parsedRetries < 0 ? 3 : parsedRetries,
-    githubToken: core.getInput('github-token') || env.GITHUB_TOKEN,
+    githubToken: env.INPUT_GITHUB_TOKEN || core.getInput('github-token') || env.GITHUB_TOKEN,
     installWorkflows: core.getInput('install-workflows') === 'true' || env.INSTALL_WORKFLOWS === 'true',
     debug: core.getInput('debug') === 'true' || env.DEBUG === 'true',
     githubRepo: env.GITHUB_REPOSITORY,
