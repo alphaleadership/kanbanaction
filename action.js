@@ -1,5 +1,5 @@
-import core from '@actions/core';
-import github from '@actions/github';
+import * as core from '@actions/core';
+import * as github from '@actions/github';
 import { validateAndGetConfig } from './src/config/index.js';
 import { GitHubClient } from './src/github/api-client.js';
 import { GeminiClient } from './src/gemini/api-client.js';
