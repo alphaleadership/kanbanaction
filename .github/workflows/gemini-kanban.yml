@@ -1,0 +1,31 @@
+name: Gemini Kanban Integration
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  process-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Gemini Kanban Action
+        uses: ./
+        with:
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

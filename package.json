@@ -1,0 +1,27 @@
+{
+  "name": "kanbangemini",
+  "version": "1.0.0",
+  "description": "",
+  "main": "kanban.js",
+  "type": "module",
+  "bin": {
+    "kanban": "./kanban.js"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
+    "@google/generative-ai": "^0.24.1",
+    "@octokit/rest": "^22.0.1",
+    "commander": "^14.0.2"
+  },
+  "devDependencies": {
+    "fast-check": "^4.5.3",
+    "jest": "^30.2.0"
+  }
+}

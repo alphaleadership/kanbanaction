@@ -1,0 +1,12 @@
+name: 'Gemini Kanban Integration'
+description: 'Integrates Gemini AI with KanbanGemini to process GitHub issues'
+inputs:
+  gemini-api-key:
+    description: 'API Key for Google Gemini'
+    required: true
+  github-token:
+    description: 'GitHub Token'
+    required: true
+runs:
+  using: 'node20'
+  main: 'action.js'

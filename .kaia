@@ -1,0 +1,14 @@
+{
+  "idees": [],
+  "a_faire": [],
+  "en_cours": [],
+  "en_revision": [],
+  "termine": [
+    {
+      "id": 1,
+      "titre": "Mettre en place le CLI",
+      "description": "",
+      "criteres_acceptation": []
+    }
+  ]
+}
