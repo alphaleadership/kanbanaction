@@ -54,3 +54,4 @@ runs:
         INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
         INPUT_INSTALL_WORKFLOWS: ${{ inputs.install-workflows }}
         INPUT_DEBUG: ${{ inputs.debug }}
+        INPUT_KANBAN_COLUMNS: ${{ inputs.kanban-columns }}
