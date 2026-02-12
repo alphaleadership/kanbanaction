@@ -384,9 +384,9 @@ on:
           - scheduled
           - CI
   push:
-    branches: [ master ]
+    branches: [ master,main ]
   pull_request:
-    branches: [ master ]
+    branches: [ master,main ]
 
 permissions:
   contents: read
