@@ -12,7 +12,7 @@ describe('WorkflowManager.installWorkflows', () => {
 
     await manager.installWorkflows();
 
-    expect(githubClient.commitFile).toHaveBeenCalledTimes(2);
+    expect(githubClient.commitFile).toHaveBeenCalledTimes(3);
 
     const firstWorkflowContent = githubClient.commitFile.mock.calls[0][1];
     expect(firstWorkflowContent).toContain('Checkout action source');
