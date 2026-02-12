@@ -2,7 +2,7 @@ import fs from 'fs';
 import { Octokit } from '@octokit/rest';
 
 async function reportFailures() {
-  const resultsPath = 'test-results.json';
+  const resultsPath = process.env.TEST_RESULTS_PATH || 'test-results.json';
   if (!fs.existsSync(resultsPath)) {
     console.log('No test results found.');
     return;

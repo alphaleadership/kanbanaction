@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install action dependencies
+        run: npm ci
+
       - name: Log Workflow Type
         run: echo "Running workflow of type ${{ github.event.inputs.type || 'CI' }}"
 

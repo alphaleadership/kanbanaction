@@ -410,16 +410,21 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Install action dependencies
+        run: npm ci
+        working-directory: .kanban-action
       - name: Log Workflow Type
         run: echo "Running workflow of type \${{ github.event.inputs.type || 'CI' }}"
       - name: Run Tests
         run: npm test -- --json --outputFile=test-results.json || true
       - name: Report Failures
         if: always()
+        working-directory: .kanban-action
         env:
           GITHUB_TOKEN: \${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: \${{ github.repository }}
-        run: node .kanban-action/scripts/report-test-failures.mjs
+          TEST_RESULTS_PATH: ../test-results.json
+        run: node scripts/report-test-failures.mjs
 `
       }
     ];
