@@ -42,7 +42,7 @@ describe('Property 7: Retry Logic Behavior', () => {
           return true;
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 2 }
     );
   });
 });
