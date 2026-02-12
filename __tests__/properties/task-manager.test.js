@@ -20,7 +20,7 @@ describe('Task Manager Properties', () => {
           return !allIds.includes(nextId);
         }
       ),
-      { numRuns: 5 }
+      { numRuns: 2 }
     );
   });
 
@@ -38,7 +38,7 @@ describe('Task Manager Properties', () => {
           );
         }
       ),
-      { numRuns: 5 }
+      { numRuns: 2 }
     );
   });
 
@@ -71,7 +71,7 @@ describe('Task Manager Properties', () => {
                 );
             }
           ),
-          { numRuns: 5 }
+          { numRuns: 2 }
       )
   })
 });

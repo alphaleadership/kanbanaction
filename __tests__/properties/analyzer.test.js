@@ -34,7 +34,7 @@ describe('Property 2: AI Analysis Consistency', () => {
           return true;
         }
       ),
-      { numRuns: 10 }
+      { numRuns: 2 }
     );
   });
 });

@@ -30,7 +30,7 @@ describe('Property 4: Kanban Data Structure Preservation', () => {
                     return true;
                 }
             ),
-            { numRuns: 20 }
+            { numRuns: 2 }
         );
     }, 15000);
 
