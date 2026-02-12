@@ -318,8 +318,8 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
         working-directory: .kanban-action
         env:
           INPUT_GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
-          INPUT_GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          INPUT_GITHUB_TOKEN: \${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: \${{ secrets.GH_PAT }}
           GITHUB_REPOSITORY: \${{ github.repository }}
           GITHUB_REF: \${{ github.ref }}
           GITHUB_EVENT_NAME: \${{ github.event_name }}
