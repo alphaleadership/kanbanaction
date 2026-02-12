@@ -15,14 +15,20 @@ export class BranchManager {
   async createBranchForTask(taskId, title, fromBranch) {
     const branchName = generateBranchName(taskId, title);
     try {
-        const baseBranch = fromBranch || await this.client.getDefaultBranch();
-        const baseSha = await this.client.getLatestCommitSha(baseBranch);
-        await this.client.createRef(branchName, baseSha);
+        // Check if branch already exists
+        await this.client.getRef(branchName);
+        console.log(`Branch ${branchName} already exists, using it.`);
         return branchName;
     } catch (error) {
-        if (error.status === 422) { // Already exists
+        if (error.status === 404) {
+            // Branch does not exist, create it from the base branch
+            console.log(`Branch ${branchName} does not exist. Creating it...`);
+            const baseBranch = fromBranch || await this.client.getDefaultBranch();
+            const baseSha = await this.client.getLatestCommitSha(baseBranch);
+            await this.client.createRef(branchName, baseSha);
             return branchName;
         }
+        // Rethrow if it's another type of error
         throw error;
     }
   }
