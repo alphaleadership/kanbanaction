@@ -21,6 +21,7 @@ async function reportFailures() {
     for (const assertion of testFile.assertionResults) {
       if (assertion.status === 'failed') {
         const title = `Test Failure: ${assertion.fullName}`;
+        const failureText = assertion.failureMessages.join('\n');
         const body = `
 ### Test Failure Details
 - **File:** ${testFile.name}
@@ -28,10 +29,9 @@ async function reportFailures() {
 - **Status:** ${assertion.status}
 
 ### Error Message
-```
-${assertion.failureMessages.join('
-')}
-```
+\`\`\`
+${failureText}
+\`\`\`
 
 ---
 *Reported by automated test workflow*

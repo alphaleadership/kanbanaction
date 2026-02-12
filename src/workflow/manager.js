@@ -384,9 +384,9 @@ on:
           - scheduled
           - CI
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 permissions:
   contents: read
@@ -408,8 +408,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - name: List Files (Debug)
-        run: ls -R .kanban-action/scripts
       - name: Install dependencies
         run: npm ci
       - name: Log Workflow Type
