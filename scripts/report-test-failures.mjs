@@ -14,7 +14,13 @@ async function reportFailures() {
     return;
   }
 
-  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    console.error('Error: GITHUB_TOKEN is not set.');
+    process.exit(1);
+  }
+
+  const octokit = new Octokit({ auth: token });
   const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
   for (const testFile of results.testResults) {

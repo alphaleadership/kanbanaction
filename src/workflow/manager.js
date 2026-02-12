@@ -417,7 +417,7 @@ jobs:
       - name: Report Failures
         if: always()
         env:
-          GITHUB_TOKEN: \${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: \${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: \${{ github.repository }}
         run: node .kanban-action/scripts/report-test-failures.mjs
 `
