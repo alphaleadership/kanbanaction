@@ -1,5 +1,8 @@
 {
   "idees": [
+  
+  ],
+  "a_faire": [
     {
       "id": 2,
       "titre": "test action",
@@ -12,9 +15,7 @@
       "metadata": {
         "issueNumber": 1
       }
-    }
-  ],
-  "a_faire": [
+    },
     {
       "id": 3,
       "titre": "Error in thomas-iniguez-visioli/youtube-public: KANBAN_COLUMNS is not defined...",
