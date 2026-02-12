@@ -296,7 +296,7 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
 
   async installWorkflows() {
     const actionRepo = process.env.GITHUB_ACTION_REPOSITORY || 'alphaleadership/kanbanaction';
-    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'main' : 'v1';
+    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'master' : 'v1';
 
     const sharedSteps = `
       - uses: actions/checkout@v4
@@ -408,6 +408,8 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - name: List Files (Debug)
+        run: ls -R .kanban-action/scripts
       - name: Install dependencies
         run: npm ci
       - name: Log Workflow Type
@@ -419,7 +421,7 @@ jobs:
         env:
           GITHUB_TOKEN: \${{ secrets.GH_PAT }}
           GITHUB_REPOSITORY: \${{ github.repository }}
-        run: node .kanban-action/scripts/report-test-failures.js
+        run: node .kanban-action/scripts/report-test-failures.mjs
 `
       }
     ];
