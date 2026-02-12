@@ -1,9 +1,10 @@
 import fs from 'fs/promises';
 import { delay } from '../utils/helpers.js';
 import { extractIssueData, detectIssueType } from '../github/issue-processor.js';
-import { createTask, addTaskToColumn, moveTask } from '../kanban/task-manager.js';
+import { createTask, addTaskToColumn, moveTask, getNextId } from '../kanban/task-manager.js';
 import { readDb, writeDb } from '../kanban/file-operations.js';
 import { DialogueManager } from '../gemini/dialogue-manager.js';
+import { generateBranchName } from '../github/branch-manager.js';
 import * as ConstantsModule from '../utils/constants.js';
 
 const KANBAN_COLUMNS = ConstantsModule.KANBAN_COLUMNS;
@@ -21,7 +22,7 @@ export class WorkflowManager {
     this.dialogueManager = new DialogueManager();
   }
 
-  async handleFileActions(actions, issueNumber, dialogue) {
+  async handleFileActions(actions, issueNumber, dialogue, branchName) {
     if (!actions || !actions.length) return null;
 
     let readResults = [];
@@ -37,7 +38,7 @@ export class WorkflowManager {
           processedActions.push({ ...action, status: 'success' });
         } else if (action.action === 'write') {
           await fs.writeFile(action.path, action.content, 'utf8');
-          await this.githubClient.commitFile(action.path, action.content, `fix: automatic update via Gemini for #${issueNumber}\n\n${action.explanation}`);
+          await this.githubClient.commitFile(action.path, action.content, `fix: automatic update via Gemini for #${issueNumber}\n\n${action.explanation}`, branchName);
           processedActions.push({ ...action, status: 'success' });
         } else if (action.action === 'patch') {
           let content = await fs.readFile(action.path, 'utf8');
@@ -49,7 +50,7 @@ export class WorkflowManager {
           if (normalizedContent.includes(normalizedOld)) {
             const updatedContent = normalizedContent.replace(normalizedOld, normalizedNew);
             await fs.writeFile(action.path, updatedContent, 'utf8');
-            await this.githubClient.commitFile(action.path, updatedContent, `fix: patch applied via Gemini for #${issueNumber}\n\n${action.explanation}`);
+            await this.githubClient.commitFile(action.path, updatedContent, `fix: patch applied via Gemini for #${issueNumber}\n\n${action.explanation}`, branchName);
             processedActions.push({ ...action, status: 'success' });
           } else {
             throw new Error(`Could not find the exact 'oldContent' in ${action.path}. Please provide an exact match including indentation.`);
@@ -72,7 +73,7 @@ export class WorkflowManager {
           title: `Context Update #${issueNumber}`,
           body: `I have read the requested files: ${readResults.map(r => r.path).join(', ')}. Please refine your analysis.`,
           labels: []
-      });
+      }, dialogue.history);
     }
 
     return null;
@@ -85,6 +86,15 @@ export class WorkflowManager {
         // 1. Fetch issue
         const rawIssue = await this.githubClient.getIssue(issueNumber);
         const issueData = extractIssueData(rawIssue);
+
+        // Determine Task ID and Create Branch early
+        const db = await readDb();
+        const existingTaskEntry = Object.values(db).flat().find(t => t.metadata && t.metadata.issueNumber === issueNumber);
+        const taskId = existingTaskEntry ? existingTaskEntry.id : getNextId(db);
+        
+        console.log(`Creating/Ensuring branch for task #${taskId}...`);
+        const branchName = await this.branchManager.createBranchForTask(taskId, issueData.title);
+        console.log(`Using branch: ${branchName}`);
 
         // Load dialogue context
         let dialogue = await this.dialogueManager.loadDialogue(issueNumber);
@@ -103,7 +113,7 @@ export class WorkflowManager {
             this.dialogueManager.addEntry(dialogue, 'assistant', analysis, { type: 'analysis', iteration: iterations });
             
             if (analysis.fileActions && analysis.fileActions.length > 0) {
-                const nextAnalysis = await this.handleFileActions(analysis.fileActions, issueNumber, dialogue);
+                const nextAnalysis = await this.handleFileActions(analysis.fileActions, issueNumber, dialogue, branchName);
                 if (nextAnalysis) {
                     iterations++;
                     console.log('Waiting 2 seconds before next iteration...');
@@ -116,24 +126,20 @@ export class WorkflowManager {
         
         await this.dialogueManager.saveDialogue(issueNumber, dialogue);
 
-        // Commit dialogue file to repo (so subsequent runs have context)
+        // Commit dialogue file to repo on the dedicated branch
         try {
             const dialoguePath = this.dialogueManager.getRelativePath(issueNumber);
             const dialogueContent = JSON.stringify(dialogue, null, 2);
-            await this.githubClient.commitFile(dialoguePath, dialogueContent, `docs: update dialogue context for #${issueNumber}`);
+            await this.githubClient.commitFile(dialoguePath, dialogueContent, `docs: update dialogue context for #${issueNumber}`, branchName);
         } catch (e) {
             console.warn('Failed to commit dialogue file:', e.message);
         }
 
         // 3. Update Kanban
         console.log('Updating Kanban board...');
-        const db = await readDb();
         const column = analysis.suggestedColumn || WorkflowManager.COLUMN_MAPPING[analysis.type] || 'idees';
         
-        // Check if task already exists for this issue
         let task;
-        const existingTaskEntry = Object.values(db).flat().find(t => t.metadata && t.metadata.issueNumber === issueNumber);
-        
         if (existingTaskEntry) {
             console.log(`Task already exists for issue #${issueNumber}. Moving to ${column}...`);
             task = existingTaskEntry;
@@ -147,10 +153,10 @@ export class WorkflowManager {
                 
         await writeDb(db);
         
-        // Commit changes to repository
+        // Commit changes to repository on the dedicated branch
         console.log('Committing changes to repository...');
         const dbContent = JSON.stringify(db, null, 2);
-        await this.githubClient.commitFile('.kaia', dbContent, `docs: update Kanban board - task ${task.id}`);
+        await this.githubClient.commitFile('.kaia', dbContent, `docs: update Kanban board - task ${task.id}`, branchName);
         
         // 4. GitHub Feedback
         console.log('Adding comment and labels to GitHub...');
@@ -217,10 +223,14 @@ ${isMissingInformation ? `\n\n### 💬 Discussion avec Gemini${clarificationSumm
         
         await this.githubClient.addLabels(issueNumber, [analysis.type, `complexity:${analysis.complexity}`]);
 
-        // 5. Branch Creation (if en_cours)
-        if (column === 'en_cours') {
-            console.log('Creating working branch...');
-            await this.branchManager.createBranchForTask(task.id, task.titre);
+        // 5. PR Creation (if en_cours or file actions performed)
+        if (column === 'en_cours' || (analysis.fileActions && analysis.fileActions.length > 0)) {
+            console.log('Creating Pull Request...');
+            try {
+                await this.branchManager.createPRForTask(task.id, task.titre, branchName);
+            } catch (prError) {
+                console.error('Failed to create PR:', prError.message);
+            }
         }
 
         console.log(`Issue #${issueNumber} processed successfully. Task ID: ${task.id}`);
