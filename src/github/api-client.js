@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import { delay } from '../utils/helpers.js';
 
 export class GitHubClient {
   constructor(token, repoPath) {
@@ -146,39 +147,7 @@ export class GitHubClient {
       });
 
       const newCommit = await this.createCommit(message, tree.sha, [sha]);
-      const MAX_RETRIES = 5;
-      for (let i = 0; i < MAX_RETRIES; i++) {
-          try {
-              await this.updateRef(targetBranch, newCommit.sha);
-              return newCommit;
-          } catch (error) {
-              if (error.status === 422 && error.message.includes('not a fast forward') && i < MAX_RETRIES - 1) {
-                  console.warn(`Fast-forward error for ref 'refs/heads/${targetBranch}', retrying commit... (Attempt ${i + 1}/${MAX_RETRIES})`);
-                  // Re-fetch the latest state to create a new commit based on it in the next iteration
-                  const latestBranchCommitSha = await this.getLatestCommitSha(targetBranch);
-                  const { data: latestCommit } = await this.octokit.git.getCommit({
-                      owner: this.owner,
-                      repo: this.repo,
-                      commit_sha: latestBranchCommitSha
-                  });
-                  const { data: latestTree } = await this.octokit.git.createTree({
-                      owner: this.owner,
-                      repo: this.repo,
-                      base_tree: latestCommit.tree.sha,
-                      tree: [{
-                          path: filePath,
-                          mode: '100644',
-                          type: 'blob',
-                          sha: blob.sha
-                      }]
-                  });
-                  newCommit = await this.createCommit(message, latestTree.sha, [latestBranchCommitSha]);
-                  await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, i))); // Exponential backoff
-                  continue; // Retry with the new commit
-              }
-              throw error; // Re-throw if not a fast-forward error or max retries reached
-          }
-      }
-      throw new Error(`Failed to commit file to '${targetBranch}' after ${MAX_RETRIES} attempts due to non-fast-forward error.`);
+      await this.updateRef(targetBranch, newCommit.sha);
+      return newCommit;
   }
 }
