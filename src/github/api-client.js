@@ -1,5 +1,4 @@
 import { Octokit } from '@octokit/rest';
-import { delay } from '../utils/helpers.js';
 
 export class GitHubClient {
   constructor(token, repoPath) {
@@ -52,7 +51,8 @@ export class GitHubClient {
           owner: this.owner,
           repo: this.repo,
           ref: `refs/heads/${ref}`,
-          sha
+          sha,
+          force: true
       });
       return data;
   }
