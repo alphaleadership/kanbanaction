@@ -1,9 +1,9 @@
 {
   "issueNumber": 106,
-  "created": "2026-02-21T18:28:51.707Z",
+  "created": "2026-02-21T18:28:50.251Z",
   "history": [
     {
-      "timestamp": "2026-02-21T18:28:51.707Z",
+      "timestamp": "2026-02-21T18:28:50.251Z",
       "role": "user",
       "content": {
         "number": 106,
@@ -21,18 +21,18 @@
       }
     },
     {
-      "timestamp": "2026-02-21T18:29:02.681Z",
+      "timestamp": "2026-02-21T18:29:07.284Z",
       "role": "assistant",
       "content": {
-        "complexity": "medium",
+        "complexity": "high",
         "type": "bug",
         "suggestedColumn": "a_faire",
         "acceptanceCriteria": [
-          "The GitHub Action successfully updates Git references (e.g., commits changes to the main branch) without 'Update is not a fast forward' errors, even under concurrent pushes.",
-          "The `updateRef` and `commitFile` logic within the action is robust to potential race conditions on the target branch.",
-          "The GitHub Action logs relevant information to diagnose future occurrences of non-fast-forward updates, if they cannot be entirely prevented."
+          "The GitHub Action successfully updates the Git reference (e.g., pushes changes to 'main') without encountering a 'not a fast forward' error.",
+          "The GitHub Action implements a robust retry mechanism for Git push operations to handle transient 'not a fast forward' errors.",
+          "Before each retry of a Git push operation, the action fetches the latest state of the target branch and, if necessary, reconciles its pending changes (e.g., by reapplying them on top of the new head) to ensure a fast-forward update is possible."
         ],
-        "icon": "🛠️",
+        "icon": "🚫",
         "color": "#D73A4A",
         "missingInformation": {
           "isMissing": false,
@@ -41,18 +41,18 @@
         "fileActions": [
           {
             "action": "read",
-            "path": ".kanban-action/src/github/api-client.js",
-            "explanation": "To understand the implementation of `updateRef` and `commitFile` methods, specifically how the Git reference update is attempted and if it includes any retry logic or `force` option."
+            "path": ".kanban-action/action.js",
+            "explanation": "To understand the main entry point and how the workflow manager is initialized and run."
           },
           {
             "action": "read",
             "path": ".kanban-action/src/workflow/manager.js",
-            "explanation": "To understand how `processGitHubIssue` calls `commitFile` and in what context, to identify potential points for conflict or concurrency issues."
+            "explanation": "To review the `processGitHubIssue` function and understand how it orchestrates file changes and calls the Git client for committing."
           },
           {
             "action": "read",
-            "path": ".kanban-action/action.js",
-            "explanation": "To understand the main execution flow of the action and how it initializes its GitHub client and workflow manager."
+            "path": ".kanban-action/src/github/api-client.js",
+            "explanation": "To inspect the `updateRef` and `commitFile` implementations, particularly how the GitHub API for Git references is invoked and if any existing retry logic or force push options are present."
           }
         ]
       },
@@ -62,5 +62,5 @@
       }
     }
   ],
-  "updated": "2026-02-21T18:29:02.683Z"
+  "updated": "2026-02-21T18:29:07.285Z"
 }
