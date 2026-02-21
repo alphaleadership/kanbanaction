@@ -120,34 +120,47 @@ export class GitHubClient {
   
   async commitFile(filePath, content, message, branch) {
       const targetBranch = branch || await this.getDefaultBranch();
-      const sha = await this.getLatestCommitSha(targetBranch);
-      const { data: commit } = await this.octokit.git.getCommit({
-          owner: this.owner,
-          repo: this.repo,
-          commit_sha: sha
-      });
-      
-      const { data: blob } = await this.octokit.git.createBlob({
-          owner: this.owner,
-          repo: this.repo,
-          content,
-          encoding: 'utf-8'
-      });
+      const maxRetries = 5;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+              const currentSha = await this.getLatestCommitSha(targetBranch);
+              const { data: latestCommit } = await this.octokit.git.getCommit({
+                  owner: this.owner,
+                  repo: this.repo,
+                  commit_sha: currentSha
+              });
+              
+              const { data: blob } = await this.octokit.git.createBlob({
+                  owner: this.owner,
+                  repo: this.repo,
+                  content,
+                  encoding: 'utf-8'
+              });
 
-      const { data: tree } = await this.octokit.git.createTree({
-          owner: this.owner,
-          repo: this.repo,
-          base_tree: commit.tree.sha,
-          tree: [{
-              path: filePath,
-              mode: '100644',
-              type: 'blob',
-              sha: blob.sha
-          }]
-      });
+              const { data: newTree } = await this.octokit.git.createTree({
+                  owner: this.owner,
+                  repo: this.repo,
+                  base_tree: latestCommit.tree.sha,
+                  tree: [{
+                      path: filePath,
+                      mode: '100644',
+                      type: 'blob',
+                      sha: blob.sha
+                  }]
+              });
 
-      const newCommit = await this.createCommit(message, tree.sha, [sha]);
-      await this.updateRef(targetBranch, newCommit.sha);
-      return newCommit;
+              const newCommit = await this.createCommit(message, newTree.sha, [currentSha]);
+              await this.updateRef(targetBranch, newCommit.sha);
+              return newCommit;
+          } catch (error) {
+              if (error.status === 422 && error.message.includes('Update is not a fast forward')) {
+                  console.warn(`Fast-forward error for ${filePath} on branch ${targetBranch}. Attempt ${attempt + 1}/${maxRetries}. Retrying...`);
+                  await delay(Math.pow(2, attempt) * 1000);
+                  continue;
+              }
+              throw error;
+          }
+      }
+      throw new Error(`Failed to commit file ${filePath} to branch ${targetBranch} after ${maxRetries} attempts due to non-fast-forward updates.`);
   }
 }
