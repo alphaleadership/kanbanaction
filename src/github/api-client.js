@@ -1,5 +1,4 @@
 import { Octokit } from '@octokit/rest';
-import { delay } from '../utils/helpers.js';
 
 export class GitHubClient {
   constructor(token, repoPath) {
@@ -120,11 +119,12 @@ export class GitHubClient {
   
   async commitFile(filePath, content, message, branch) {
       const targetBranch = branch || await this.getDefaultBranch();
-      const maxRetries = 5;
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
+      let retries = 5; // Number of retries for non-fast-forward errors
+      
+      while (retries > 0) {
           try {
               const currentSha = await this.getLatestCommitSha(targetBranch);
-              const { data: latestCommit } = await this.octokit.git.getCommit({
+              const { data: commit } = await this.octokit.git.getCommit({
                   owner: this.owner,
                   repo: this.repo,
                   commit_sha: currentSha
@@ -137,10 +137,10 @@ export class GitHubClient {
                   encoding: 'utf-8'
               });
 
-              const { data: newTree } = await this.octokit.git.createTree({
+              const { data: tree } = await this.octokit.git.createTree({
                   owner: this.owner,
                   repo: this.repo,
-                  base_tree: latestCommit.tree.sha,
+                  base_tree: commit.tree.sha,
                   tree: [{
                       path: filePath,
                       mode: '100644',
@@ -149,18 +149,19 @@ export class GitHubClient {
                   }]
               });
 
-              const newCommit = await this.createCommit(message, newTree.sha, [currentSha]);
+              const newCommit = await this.createCommit(message, tree.sha, [currentSha]);
               await this.updateRef(targetBranch, newCommit.sha);
-              return newCommit;
+              return newCommit; // Success, exit loop
           } catch (error) {
               if (error.status === 422 && error.message.includes('Update is not a fast forward')) {
-                  console.warn(`Fast-forward error for ${filePath} on branch ${targetBranch}. Attempt ${attempt + 1}/${maxRetries}. Retrying...`);
-                  await delay(Math.pow(2, attempt) * 1000);
-                  continue;
+                  console.warn(`Non-fast-forward update detected for '${targetBranch}' while committing '${filePath}'. Retrying... (${--retries} attempts left)`);
+                  // Add a small delay before retrying to give other operations a chance to complete
+                  await new Promise(resolve => setTimeout(resolve, 1000)); 
+              } else {
+                  throw error; // Re-throw other errors immediately
               }
-              throw error;
           }
       }
-      throw new Error(`Failed to commit file ${filePath} to branch ${targetBranch} after ${maxRetries} attempts due to non-fast-forward updates.`);
+      throw new Error(`Failed to commit file '${filePath}' to branch '${targetBranch}' after multiple retries due to non-fast-forward update.`);
   }
 }
