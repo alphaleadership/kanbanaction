@@ -119,9 +119,8 @@ export class GitHubClient {
   
   async commitFile(filePath, content, message, branch) {
       const targetBranch = branch || await this.getDefaultBranch();
-      let retries = 5; // Number of retries for non-fast-forward errors
-      
-      while (retries > 0) {
+      const maxRetries = 5;
+      for (let i = 0; i < maxRetries; i++) {
           try {
               const currentSha = await this.getLatestCommitSha(targetBranch);
               const { data: commit } = await this.octokit.git.getCommit({
@@ -129,13 +128,34 @@ export class GitHubClient {
                   repo: this.repo,
                   commit_sha: currentSha
               });
-              
+
+              // Check if file content is identical to avoid unnecessary commits
+              let fileSha = null;
+              try {
+                  const { data: existingContent } = await this.octokit.repos.getContent({
+                      owner: this.owner,
+                      repo: this.repo,
+                      path: filePath,
+                      ref: currentSha
+                  });
+                  fileSha = existingContent.sha;
+              } catch (error) {
+                  if (error.status !== 404) { // Ignore 404 (file not found), rethrow other errors
+                      throw error;
+                  }
+              }
+
               const { data: blob } = await this.octokit.git.createBlob({
                   owner: this.owner,
                   repo: this.repo,
                   content,
                   encoding: 'utf-8'
               });
+
+              if (fileSha === blob.sha) {
+                  console.log(`File ${filePath} content is identical. Skipping commit.`);
+                  return commit;
+              }
 
               const { data: tree } = await this.octokit.git.createTree({
                   owner: this.owner,
@@ -151,17 +171,16 @@ export class GitHubClient {
 
               const newCommit = await this.createCommit(message, tree.sha, [currentSha]);
               await this.updateRef(targetBranch, newCommit.sha);
-              return newCommit; // Success, exit loop
+              return newCommit;
           } catch (error) {
-              if (error.status === 422 && error.message.includes('Update is not a fast forward')) {
-                  console.warn(`Non-fast-forward update detected for '${targetBranch}' while committing '${filePath}'. Retrying... (${--retries} attempts left)`);
-                  // Add a small delay before retrying to give other operations a chance to complete
-                  await new Promise(resolve => setTimeout(resolve, 1000)); 
+              if (error.message.includes('Update is not a fast forward') && i < maxRetries - 1) {
+                  console.warn(`Non-fast-forward update detected for branch ${targetBranch}. Retrying... (Attempt ${i + 1}/${maxRetries})`);
+                  // Ensure 'delay' utility is imported at the top of the file: import { delay } from '../utils/helpers.js';
+                  await delay(1000 * (i + 1)); // Exponential backoff
               } else {
-                  throw error; // Re-throw other errors immediately
+                  throw error; // Re-throw if it's not a fast-forward error or max retries reached
               }
           }
       }
-      throw new Error(`Failed to commit file '${filePath}' to branch '${targetBranch}' after multiple retries due to non-fast-forward update.`);
   }
 }
