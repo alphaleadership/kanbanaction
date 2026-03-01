@@ -1,9 +1,9 @@
 {
   "issueNumber": 119,
-  "created": "2026-03-01T18:39:27.046Z",
+  "created": "2026-03-01T18:39:33.163Z",
   "history": [
     {
-      "timestamp": "2026-03-01T18:39:27.046Z",
+      "timestamp": "2026-03-01T18:39:33.163Z",
       "role": "user",
       "content": {
         "number": 119,
@@ -21,19 +21,19 @@
       }
     },
     {
-      "timestamp": "2026-03-01T18:39:40.443Z",
+      "timestamp": "2026-03-01T18:39:41.532Z",
       "role": "assistant",
       "content": {
         "complexity": "medium",
         "type": "bug",
         "suggestedColumn": "a_faire",
         "acceptanceCriteria": [
-          "The `.kanban-action` successfully updates the `main` branch when an issue is labeled, even if other changes have been pushed to `main` concurrently.",
-          "The `.kanban-action` does not fail with an \"Update is not a fast forward\" error during normal operation.",
-          "The action ensures that any files it attempts to commit are based on the latest version of the target branch before pushing, or implements a robust retry mechanism."
+          "The GitHub Action successfully updates the repository's main branch without encountering 'Update is not a fast forward' errors when processing issue labels.",
+          "The GitHub Action ensures the local reference is up-to-date with the remote main branch before attempting any commit operations.",
+          "Kanban board updates, triggered by labeling issues, are consistently applied to the repository without conflicts."
         ],
         "icon": "🐛",
-        "color": "#d73a4a",
+        "color": "#D73A4A",
         "missingInformation": {
           "isMissing": false,
           "details": []
@@ -41,18 +41,18 @@
         "fileActions": [
           {
             "action": "read",
-            "path": "src/github/api-client.js",
-            "explanation": "To understand the implementation of `updateRef` and `commitFile` methods, which are directly involved in the error."
+            "path": ".kanban-action/src/github/api-client.js",
+            "explanation": "To understand how `updateRef` and `commitFile` are implemented and identify why a non-fast-forward update is being attempted. This file likely contains the logic for fetching and pushing git references."
           },
           {
             "action": "read",
-            "path": "src/workflow/manager.js",
-            "explanation": "To understand how `GitHubClient.commitFile` is called within the `processGitHubIssue` workflow, identifying potential race conditions or sequencing issues."
+            "path": ".kanban-action/src/workflow/manager.js",
+            "explanation": "To understand the context in which `GitHubClient.commitFile` is invoked within the overall workflow, specifically within the `processGitHubIssue` method."
           },
           {
-            "action": "patch",
-            "path": "src/github/api-client.js",
-            "explanation": "To implement logic within the `updateRef` or `commitFile` method that fetches the latest commit SHA of the target branch before attempting to push, or to add retry logic with a potential rebase/merge step to handle concurrent updates gracefully. Alternatively, this fix might involve changes in `src/workflow/manager.js` to manage the Git operations at a higher level."
+            "action": "read",
+            "path": ".github/workflows/gemini-kanban.yml",
+            "explanation": "To review the GitHub Actions workflow configuration for any specific steps or conditions that might lead to a stale working directory or race conditions before a push."
           }
         ]
       },
@@ -62,7 +62,115 @@
       }
     },
     {
-      "timestamp": "2026-03-01T18:39:40.444Z",
+      "timestamp": "2026-03-01T18:39:41.534Z",
+      "role": "system",
+      "content": [
+        {
+          "path": ".github/workflows/gemini-kanban.yml",
+          "content": "name: Gemini Kanban Integration\non:\n  issues:\n    types: [opened, labeled]\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  issues: write\n  pull-requests: write\n\njobs:\n  process-issue:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      \n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run Gemini Kanban Action\n        uses: ./\n        with:\n          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n"
+        }
+      ],
+      "metadata": {
+        "type": "file_read_results"
+      }
+    },
+    {
+      "timestamp": "2026-03-01T18:40:19.306Z",
+      "role": "assistant",
+      "content": {
+        "complexity": "medium",
+        "type": "bug",
+        "suggestedColumn": "a_faire",
+        "acceptanceCriteria": [
+          "The GitHub Action successfully updates the repository's main branch without encountering 'Update is not a fast forward' errors when processing issue labels.",
+          "The GitHub Action ensures the local reference (e.g., `main`) is up-to-date with the remote main branch before attempting any commit or reference update operations.",
+          "Kanban board updates, triggered by labeling issues, are consistently applied to the repository without conflicts or failures caused by stale Git references."
+        ],
+        "icon": "🐛",
+        "color": "#D73A4A",
+        "missingInformation": {
+          "isMissing": false,
+          "details": []
+        },
+        "fileActions": [
+          {
+            "action": "read",
+            "path": ".kanban-action/src/github/api-client.js",
+            "explanation": "To investigate the implementation of `GitHubClient.updateRef` and `GitHubClient.commitFile`. The error indicates these methods are attempting a non-fast-forward update, suggesting missing logic to pull or rebase the latest changes from the remote `main` branch before pushing, or incorrect handling of the `force` parameter."
+          },
+          {
+            "action": "read",
+            "path": ".kanban-action/src/workflow/manager.js",
+            "explanation": "To understand the sequence of operations within `WorkflowManager.processGitHubIssue` that leads to calling `GitHubClient.commitFile`, to identify if any upstream Git operations (like checking out a specific branch or fetching) are incomplete or misconfigured."
+          },
+          {
+            "action": "read",
+            "path": ".github/workflows/gemini-kanban.yml",
+            "explanation": "To verify the GitHub Actions workflow configuration, specifically the `actions/checkout` step and any subsequent steps that might interact with the repository's Git history, looking for potential race conditions or insufficient fetching of repository history."
+          }
+        ]
+      },
+      "metadata": {
+        "type": "analysis",
+        "iteration": 1
+      }
+    },
+    {
+      "timestamp": "2026-03-01T18:40:19.307Z",
+      "role": "system",
+      "content": [
+        {
+          "path": ".github/workflows/gemini-kanban.yml",
+          "content": "name: Gemini Kanban Integration\non:\n  issues:\n    types: [opened, labeled]\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  issues: write\n  pull-requests: write\n\njobs:\n  process-issue:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      \n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run Gemini Kanban Action\n        uses: ./\n        with:\n          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n"
+        }
+      ],
+      "metadata": {
+        "type": "file_read_results"
+      }
+    },
+    {
+      "timestamp": "2026-03-01T18:40:43.587Z",
+      "role": "assistant",
+      "content": {
+        "complexity": "medium",
+        "type": "bug",
+        "suggestedColumn": "a_faire",
+        "acceptanceCriteria": [
+          "The GitHub Action successfully updates the repository's main branch without encountering 'Update is not a fast forward' errors when processing issue labels.",
+          "The GitHub Action ensures the local reference (e.g., `main`) is synchronized with the remote main branch's latest commit before attempting any commit or reference update operations to prevent conflicts.",
+          "Kanban board updates, triggered by labeling issues, are consistently applied to the repository without conflicts or failures caused by stale Git references."
+        ],
+        "icon": "🐛",
+        "color": "#D73A4A",
+        "missingInformation": {
+          "isMissing": false,
+          "details": []
+        },
+        "fileActions": [
+          {
+            "action": "read",
+            "path": "src/github/api-client.js",
+            "explanation": "To investigate the implementation of `GitHubClient.updateRef` and `GitHubClient.commitFile`. The error indicates these methods are attempting a non-fast-forward update, suggesting missing logic to fetch and potentially rebase or merge the latest changes from the remote `main` branch before pushing, or incorrect handling of the `force` parameter which should generally be avoided for main branches."
+          },
+          {
+            "action": "read",
+            "path": "src/workflow/manager.js",
+            "explanation": "To understand the sequence of operations within `WorkflowManager.processGitHubIssue` that leads to calling `GitHubClient.commitFile`. This will help determine if there's an appropriate place to insert a Git pull/fetch before the commit operation, or if the action's logic inadvertently creates a divergent history."
+          },
+          {
+            "action": "read",
+            "path": ".github/workflows/gemini-kanban.yml",
+            "explanation": "To review the GitHub Actions workflow configuration, specifically the `actions/checkout` step and any subsequent steps that might interact with the repository's Git history, looking for potential race conditions or insufficient fetching of repository history (e.g., shallow clone depth). Though provided, listing it again reinforces its relevance for inspection."
+          }
+        ]
+      },
+      "metadata": {
+        "type": "analysis",
+        "iteration": 2
+      }
+    },
+    {
+      "timestamp": "2026-03-01T18:40:43.588Z",
       "role": "system",
       "content": [
         {
@@ -72,45 +180,16 @@
         {
           "path": "src/workflow/manager.js",
           "content": "import fs from 'fs/promises';\nimport { delay } from '../utils/helpers.js';\nimport { extractIssueData, detectIssueType } from '../github/issue-processor.js';\nimport { createTask, addTaskToColumn, moveTask, getNextId } from '../kanban/task-manager.js';\nimport { readDb, writeDb } from '../kanban/file-operations.js';\nimport { DialogueManager } from '../gemini/dialogue-manager.js';\nimport { generateBranchName } from '../github/branch-manager.js';\nimport * as ConstantsModule from '../utils/constants.js';\n\nconst KANBAN_COLUMNS = ConstantsModule.KANBAN_COLUMNS;\nconst COLUMN_MAPPING = ConstantsModule.COLUMN_MAPPING;\n\nexport class WorkflowManager {\n  static KANBAN_COLUMNS = KANBAN_COLUMNS;\n  static COLUMN_MAPPING = COLUMN_MAPPING;\n\n  constructor(githubClient, geminiClient, analyzer, branchManager) {\n    this.githubClient = githubClient;\n    this.geminiClient = geminiClient;\n    this.analyzer = analyzer;\n    this.branchManager = branchManager;\n    this.dialogueManager = new DialogueManager();\n  }\n\n  async handleFileActions(actions, issueNumber, dialogue, branchName) {\n    if (!actions || !actions.length) return null;\n\n    let readResults = [];\n    const processedActions = [];\n\n    for (const action of actions) {\n      console.log(`Executing file action: ${action.action} on ${action.path}...`);\n      \n      try {\n        if (action.action === 'read') {\n          const content = await fs.readFile(action.path, 'utf8');\n          readResults.push({ path: action.path, content });\n          processedActions.push({ ...action, status: 'success' });\n        } else if (action.action === 'write') {\n          await fs.writeFile(action.path, action.content, 'utf8');\n          await this.githubClient.commitFile(action.path, action.content, `fix: automatic update via Gemini for #${issueNumber}\\n\\n${action.explanation}`, branchName);\n          processedActions.push({ ...action, status: 'success' });\n        } else if (action.action === 'patch') {\n          let content = await fs.readFile(action.path, 'utf8');\n          // Normalize line endings to LF for consistent matching\n          const normalizedContent = content.replace(/\\r\\n/g, '\\n');\n          const normalizedOld = action.oldContent.replace(/\\r\\n/g, '\\n');\n          const normalizedNew = action.newContent.replace(/\\r\\n/g, '\\n');\n\n          if (normalizedContent.includes(normalizedOld)) {\n            const updatedContent = normalizedContent.replace(normalizedOld, normalizedNew);\n            await fs.writeFile(action.path, updatedContent, 'utf8');\n            await this.githubClient.commitFile(action.path, updatedContent, `fix: patch applied via Gemini for #${issueNumber}\\n\\n${action.explanation}`, branchName);\n            processedActions.push({ ...action, status: 'success' });\n          } else {\n            throw new Error(`Could not find the exact 'oldContent' in ${action.path}. Please provide an exact match including indentation.`);\n          }\n        }\n      } catch (error) {\n        console.error(`Failed to execute action ${action.action} on ${action.path}:`, error.message);\n        processedActions.push({ ...action, status: 'error', error: error.message });\n      }\n    }\n\n    if (readResults.length > 0) {\n      this.dialogueManager.addEntry(dialogue, 'system', readResults, { type: 'file_read_results' });\n      await this.dialogueManager.saveDialogue(issueNumber, dialogue);\n      \n      console.log('Files read. Re-analyzing with new context...');\n      // Re-run analysis with context added to dialogue\n      // The analyzer will see the history in the dialogue if we pass it (to be implemented)\n      return await this.analyzer.analyzeIssue({\n          title: `Context Update #${issueNumber}`,\n          body: `I have read the requested files: ${readResults.map(r => r.path).join(', ')}. Please refine your analysis.`,\n          labels: []\n      }, dialogue.history);\n    }\n\n    return null;\n  }\n\n  async processGitHubIssue(issueNumber) {\n    console.log(`Processing issue #${issueNumber}...`);\n    \n    try {\n        // 1. Fetch issue\n        const rawIssue = await this.githubClient.getIssue(issueNumber);\n        const issueData = extractIssueData(rawIssue);\n\n        // Determine Task ID and Create Branch early\n        const db = await readDb();\n        const existingTaskEntry = Object.values(db).flat().find(t => t.metadata && t.metadata.issueNumber === issueNumber);\n        const taskId = existingTaskEntry ? existingTaskEntry.id : getNextId(db);\n        \n        console.log(`Creating/Ensuring branch for task #${taskId}...`);\n        const branchName = await this.branchManager.createBranchForTask(taskId, issueData.title);\n        console.log(`Using branch: ${branchName}`);\n\n        // Load dialogue context\n        let dialogue = await this.dialogueManager.loadDialogue(issueNumber);\n        this.dialogueManager.addEntry(dialogue, 'user', issueData, { event: 'issue_opened/labeled' });\n        \n        // 2. AI Analysis (with Loop for file actions)\n        let analysis;\n        let iterations = 0;\n        const maxIterations = 3;\n\n        while (iterations < maxIterations) {\n            console.log(`Analyzing issue with Gemini (Iteration ${iterations + 1})...`);\n            analysis = await this.analyzer.analyzeIssue(issueData, dialogue.history);\n            \n            // Save analysis to dialogue\n            this.dialogueManager.addEntry(dialogue, 'assistant', analysis, { type: 'analysis', iteration: iterations });\n            \n            if (analysis.fileActions && analysis.fileActions.length > 0) {\n                const nextAnalysis = await this.handleFileActions(analysis.fileActions, issueNumber, dialogue, branchName);\n                if (nextAnalysis) {\n                    iterations++;\n                    console.log('Waiting 2 seconds before next iteration...');\n                    await delay(2000);\n                    continue; \n                }\n            }\n            break;\n        }\n        \n        await this.dialogueManager.saveDialogue(issueNumber, dialogue);\n\n        // Commit dialogue file to repo on the dedicated branch\n        try {\n            const dialoguePath = this.dialogueManager.getRelativePath(issueNumber);\n            const dialogueContent = JSON.stringify(dialogue, null, 2);\n            await this.githubClient.commitFile(dialoguePath, dialogueContent, `docs: update dialogue context for #${issueNumber}`, branchName);\n        } catch (e) {\n            console.warn('Failed to commit dialogue file:', e.message);\n        }\n\n        // 3. Update Kanban\n        console.log('Updating Kanban board...');\n        const column = analysis.suggestedColumn || WorkflowManager.COLUMN_MAPPING[analysis.type] || 'idees';\n        \n        let task;\n        if (existingTaskEntry) {\n            console.log(`Task already exists for issue #${issueNumber}. Moving to ${column}...`);\n            task = existingTaskEntry;\n            task.icon = analysis.icon || task.icon;\n            task.color = analysis.color || task.color;\n            moveTask(db, task.id, column);\n        } else {\n            task = createTask(issueData.title, issueData.body, analysis.acceptanceCriteria, { issueNumber }, analysis.icon, analysis.color);\n            addTaskToColumn(db, task, column);\n        }\n                \n        await writeDb(db);\n        \n        // Commit changes to repository on the dedicated branch\n        console.log('Committing changes to repository...');\n        const dbContent = JSON.stringify(db, null, 2);\n        await this.githubClient.commitFile('.kaia', dbContent, `docs: update Kanban board - task ${task.id}`, branchName);\n        \n        // 4. GitHub Feedback\n        console.log('Adding comment and labels to GitHub...');\n        const missingDetails = analysis?.missingInformation?.details || [];\n        const isMissingInformation = Boolean(analysis?.missingInformation?.isMissing && missingDetails.length > 0);\n        const clarification = isMissingInformation\n          ? await this.analyzer.generateClarificationDiscussion(issueData, missingDetails)\n          : null;\n\n        const clarificationSummary = clarification?.summary\n          ? `\\n${clarification.summary}`\n          : '';\n        const clarificationQuestions = clarification?.questions?.length\n          ? `\\n\\n**Questions pour avancer :**\\n${clarification.questions.map(q => `- ${q}`).join('\\n')}`\n          : '';\n        const clarificationInputs = clarification?.requestedInputs?.length\n          ? `\\n\\n**Éléments à fournir à Gemini :**\\n${clarification.requestedInputs.map(i => `- ${i}`).join('\\n')}`\n          : '';\n\n        const commentBody = `\n### ${analysis.icon || '📝'} Task Created: ${task.id}\n**Complexity:** ${analysis.complexity}\n**Type:** ${analysis.type}\n**Color:** \\`${analysis.color}\\`\n**Suggested Column:** ${column}\n\n#### Acceptance Criteria:\n${analysis.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\\n')}\n\n${isMissingInformation ? `\\n> [!WARNING]\\n> **Missing Information:**\\n> ${missingDetails.join('\\n> ')}` : ''}\n${isMissingInformation ? `\\n\\n### 💬 Discussion avec Gemini${clarificationSummary}${clarificationQuestions}${clarificationInputs}` : ''}\n    `;\n        \n        \n        try {\n            if (this.githubClient.debug) {\n                console.log('Attempting to create comment on GitHub issue...');\n            }\n            await this.githubClient.createComment(issueNumber, commentBody);\n            if (this.githubClient.debug) {\n                console.log('Successfully created comment on GitHub issue.');\n            }\n        } catch (commentError) {\n            console.error(`Error creating comment on issue #${issueNumber}:`, commentError.message);\n            if (this.githubClient.debug) {\n                console.error('Comment Error Stack:', commentError.stack);\n            }\n        }\n\n        try {\n            if (this.githubClient.debug) {\n                console.log('Attempting to add labels to GitHub issue...');\n            }\n            await this.githubClient.addLabels(issueNumber, [analysis.type, `complexity:${analysis.complexity}`]);\n            if (this.githubClient.debug) {\n                console.log('Successfully added labels to GitHub issue.');\n            }\n        } catch (labelError) {\n            console.error(`Error adding labels to issue #${issueNumber}:`, labelError.message);\n            if (this.githubClient.debug) {\n                console.error('Label Error Stack:', labelError.stack);\n            }\n        }\n        \n        await this.githubClient.addLabels(issueNumber, [analysis.type, `complexity:${analysis.complexity}`]);\n\n        // 5. PR Creation (if en_cours or file actions performed)\n        if (column === 'en_cours' || (analysis.fileActions && analysis.fileActions.length > 0)) {\n            console.log('Creating Pull Request...');\n            try {\n                await this.branchManager.createPRForTask(task.id, task.titre, branchName);\n            } catch (prError) {\n                console.error('Failed to create PR:', prError.message);\n            }\n        }\n\n        console.log(`Issue #${issueNumber} processed successfully. Task ID: ${task.id}`);\n        return task;\n    } catch (error) {\n        console.error(`Error processing issue #${issueNumber}:`, error.message);\n        try {\n            await this.githubClient.createComment(issueNumber, `❌ **Error processing issue:** ${error.message}\\n\\nPlease check the action logs for more details.`);\n        } catch (e) {\n            console.error('Failed to post error comment to GitHub:', e.message);\n        }\n        throw error;\n    }\n  }\n\n  async processPendingTasks() {\n    console.log('Scanning Kanban for pending tasks...');\n    const db = await readDb();\n    const columnsToProcess = [WorkflowManager.KANBAN_COLUMNS.IDEES, WorkflowManager.KANBAN_COLUMNS.A_FAIRE];\n    let processedCount = 0;\n\n    for (const column of columnsToProcess) {\n      const tasks = db[column] || [];\n      for (const task of tasks) {\n        // Skip if already has an issue or was recently analyzed\n        if (task.metadata && task.metadata.issueNumber) continue;\n        \n        console.log(`Processing pending task #${task.id}: ${task.titre}...`);\n        \n        // Use AI to refine task\n        const analysis = await this.analyzer.analyzeIssue({\n          title: task.titre,\n          body: task.description || ''\n        });\n\n        // Update task with AI findings\n        task.description = task.description || '';\n        task.criteres_acceptation = analysis.acceptanceCriteria;\n        task.icon = analysis.icon || task.icon;\n        task.color = analysis.color || task.color;\n        task.metadata = {\n          ...task.metadata,\n          type: analysis.type,\n          complexity: analysis.complexity,\n          lastAnalyzed: new Date().toISOString()\n        };\n\n        processedCount++;\n        // Add a small delay between tasks to avoid 429\n        await delay(1000);\n      }\n    }\n\n    if (processedCount > 0) {\n      await writeDb(db);\n      const dbContent = JSON.stringify(db, null, 2);\n      await this.githubClient.commitFile('.kaia', dbContent, `docs: refine ${processedCount} pending tasks via Gemini`);\n      console.log(`Refined ${processedCount} tasks.`);\n    } else {\n      console.log('No pending tasks to process.');\n    }\n  }\n\n  async installWorkflows() {\n    const actionRepo = process.env.GITHUB_ACTION_REPOSITORY || 'alphaleadership/kanbanaction';\n    const actionVersion = actionRepo === 'alphaleadership/kanbanaction' ? 'master' : 'v1';\n\n    const sharedSteps = `\n      - uses: actions/checkout@v4\n      - name: Checkout action source\n        uses: actions/checkout@v4\n        with:\n          repository: ${actionRepo}\n          ref: ${actionVersion}\n          path: .kanban-action\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n      - name: Install action dependencies\n        run: npm ci\n        working-directory: .kanban-action\n      - name: Run Gemini Kanban Action\n        run: node action.js\n        working-directory: .kanban-action\n        env:\n          INPUT_GEMINI_API_KEY: \\${{ secrets.GEMINI_API_KEY }}\n          INPUT_GITHUB_TOKEN: \\${{ secrets.GH_PAT }}\n          GITHUB_TOKEN: \\${{ secrets.GH_PAT }}\n          GITHUB_REPOSITORY: \\${{ github.repository }}\n          GITHUB_REF: \\${{ github.ref }}\n          GITHUB_EVENT_NAME: \\${{ github.event_name }}\n          GITHUB_EVENT_PATH: \\${{ github.event_path }}\n          GITHUB_ACTION_REPOSITORY: ${actionRepo}\n`;\n\n    const workflows = [\n      {\n        path: '.github/workflows/gemini-kanban.yml',\n        content: `name: Gemini Kanban Integration\non:\n  issues:\n    types: [opened, labeled]\n  pull_request:\n    types: [closed]\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  issues: write\n  pull-requests: write\n\njobs:\n  process-issue:\n    runs-on: ubuntu-latest\n    steps:${sharedSteps}\n`\n      },\n      {\n        path: '.github/workflows/process-pending-tasks.yml',\n        content: `name: Process Pending Tasks\non:\n  schedule:\n    - cron: '0 0 * * *'\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  issues: write\n  pull-requests: write\n\njobs:\n  process-tasks:\n    runs-on: ubuntu-latest\n    steps:${sharedSteps}\n`\n      },\n      {\n        path: '.github/workflows/test-and-report.yml',\n        content: `name: Run Tests and Report Failures\non:\n  workflow_dispatch:\n    inputs:\n      type:\n        description: 'Type of workflow run'\n        required: true\n        default: 'manual'\n        type: choice\n        options:\n          - manual\n          - scheduled\n          - CI\n  push:\n    branches: [ master,main ]\n  pull_request:\n    branches: [ master,main ]\n\npermissions:\n  contents: read\n  issues: write\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Checkout action source\n        uses: actions/checkout@v4\n        with:\n          repository: ${actionRepo}\n          ref: ${actionVersion}\n          path: .kanban-action\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n      - name: Install dependencies\n        run: npm ci\n      - name: Install action dependencies\n        run: npm ci\n        working-directory: .kanban-action\n      - name: Log Workflow Type\n        run: echo \"Running workflow of type \\${{ github.event.inputs.type || 'CI' }}\"\n      - name: Run Tests\n        run: npm test -- --json --outputFile=test-results.json || true\n      - name: Report Failures\n        if: always()\n        working-directory: .kanban-action\n        env:\n          GITHUB_TOKEN: \\${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}\n          GITHUB_REPOSITORY: \\${{ github.repository }}\n          TEST_RESULTS_PATH: ../test-results.json\n        run: node scripts/report-test-failures.mjs\n`\n      }\n    ];\n\n    console.log(`Installing/Updating workflows using action: ${actionRepo}@${actionVersion}...`);\n\n    for (const wf of workflows) {\n      try {\n        await this.githubClient.commitFile(wf.path, wf.content, `ci: install/update ${wf.path}`);\n        console.log(`Successfully installed ${wf.path}`);\n      } catch (error) {\n        let message = error.message;\n        if (error.status === 403 || error.status === 404) {\n          message += \" (Hint: The default GITHUB_TOKEN cannot modify workflow files. Ensure you are using a Personal Access Token (PAT) with 'workflow' scope.)\";\n        }\n        console.error(`Failed to install ${wf.path}:`, message);\n      }\n    }\n  }\n\n  async processPullRequestMerge(prNumber) {\n    console.log(`Processing merged PR #${prNumber}...`);\n\n    try {\n      // 1. Fetch PR data to find linked issues\n      const pr = await this.githubClient.octokit.pulls.get({\n        owner: this.githubClient.owner,\n        repo: this.githubClient.repo,\n        pull_number: prNumber\n      });\n\n      const body = pr.data.body || '';\n      // Simple regex to find \"closes #123\" or \"fixes #123\"\n      const issueMatches = body.match(/(?:closes|fixes|resolves)\\s+#(\\d+)/gi);\n\n      if (!issueMatches) {\n        console.log('No linked issues found in PR description.');\n        return;\n      }\n\n      const db = await readDb();\n      let updated = false;\n\n      for (const match of issueMatches) {\n        const issueNumber = parseInt(match.match(/\\d+/)[0]);\n        console.log(`Found linked issue #${issueNumber}. Moving task to 'termine'...`);\n\n        const existingTaskEntry = Object.values(db).flat().find(t => t.metadata && t.metadata.issueNumber === issueNumber);\n\n        if (existingTaskEntry) {\n          moveTask(db, existingTaskEntry.id, 'termine');\n          updated = true;\n          console.log(`Task #${existingTaskEntry.id} moved to 'termine'.`);\n        } else {\n          console.log(`No Kanban task found for issue #${issueNumber}.`);\n        }\n      }\n\n      if (updated) {\n        await writeDb(db);\n        const dbContent = JSON.stringify(db, null, 2);\n        await this.githubClient.commitFile('.kaia', dbContent, `docs: complete tasks from merged PR #${prNumber}`);\n      }\n    } catch (error) {\n      console.error(`Error processing merged PR #${prNumber}:`, error.message);\n      throw error;\n    }\n  }\n}"
+        },
+        {
+          "path": ".github/workflows/gemini-kanban.yml",
+          "content": "name: Gemini Kanban Integration\non:\n  issues:\n    types: [opened, labeled]\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  issues: write\n  pull-requests: write\n\njobs:\n  process-issue:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      \n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run Gemini Kanban Action\n        uses: ./\n        with:\n          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n"
         }
       ],
       "metadata": {
         "type": "file_read_results"
       }
-    },
-    {
-      "timestamp": "2026-03-01T18:40:57.166Z",
-      "role": "assistant",
-      "content": {
-        "complexity": "medium",
-        "type": "bug",
-        "suggestedColumn": "en_cours",
-        "acceptanceCriteria": [
-          "The `.kanban-action` successfully updates files on the target branch (e.g., `main` or task branch) without failing due to 'Update is not a fast forward' errors, even when concurrent commits occur.",
-          "The `.kanban-action` implements a robust retry mechanism with exponential backoff for Git operations to handle transient non-fast-forward update conflicts.",
-          "The action avoids creating new commits if the content of the file being committed is identical to the content already present at the latest commit of the target branch."
-        ],
-        "icon": "🐛",
-        "color": "#d73a4a",
-        "missingInformation": {
-          "isMissing": false,
-          "details": []
-        },
-        "fileActions": [
-          {
-            "action": "patch",
-            "path": "src/github/api-client.js",
-            "oldContent": "  async commitFile(filePath, content, message, branch) {\n      const targetBranch = branch || await this.getDefaultBranch();\n      const sha = await this.getLatestCommitSha(targetBranch);\n      const { data: commit } = await this.octokit.git.getCommit({\n          owner: this.owner,\n          repo: this.repo,\n          commit_sha: sha\n      });\n      \n      const { data: blob } = await this.octokit.git.createBlob({\n          owner: this.owner,\n          repo: this.repo,\n          content,\n          encoding: 'utf-8'\n      });\n\n      const { data: tree } = await this.octokit.git.createTree({\n          owner: this.owner,\n          repo: this.repo,\n          base_tree: commit.tree.sha,\n          tree: [{\n              path: filePath,\n              mode: '100644',\n              type: 'blob',\n              sha: blob.sha\n          }]\n      });\n\n      const newCommit = await this.createCommit(message, tree.sha, [sha]);\n      await this.updateRef(targetBranch, newCommit.sha);\n      return newCommit;\n  }",
-            "newContent": "  async commitFile(filePath, content, message, branch) {\n      const targetBranch = branch || await this.getDefaultBranch();\n      const maxRetries = 5;\n      for (let i = 0; i < maxRetries; i++) {\n          try {\n              const currentSha = await this.getLatestCommitSha(targetBranch);\n              const { data: commit } = await this.octokit.git.getCommit({\n                  owner: this.owner,\n                  repo: this.repo,\n                  commit_sha: currentSha\n              });\n\n              // Check if file content is identical to avoid unnecessary commits\n              let fileSha = null;\n              try {\n                  const { data: existingContent } = await this.octokit.repos.getContent({\n                      owner: this.owner,\n                      repo: this.repo,\n                      path: filePath,\n                      ref: currentSha\n                  });\n                  fileSha = existingContent.sha;\n              } catch (error) {\n                  if (error.status !== 404) { // Ignore 404 (file not found), rethrow other errors\n                      throw error;\n                  }\n              }\n\n              const { data: blob } = await this.octokit.git.createBlob({\n                  owner: this.owner,\n                  repo: this.repo,\n                  content,\n                  encoding: 'utf-8'\n              });\n\n              if (fileSha === blob.sha) {\n                  console.log(`File ${filePath} content is identical. Skipping commit.`);\n                  return commit;\n              }\n\n              const { data: tree } = await this.octokit.git.createTree({\n                  owner: this.owner,\n                  repo: this.repo,\n                  base_tree: commit.tree.sha,\n                  tree: [{\n                      path: filePath,\n                      mode: '100644',\n                      type: 'blob',\n                      sha: blob.sha\n                  }]\n              });\n\n              const newCommit = await this.createCommit(message, tree.sha, [currentSha]);\n              await this.updateRef(targetBranch, newCommit.sha);\n              return newCommit;\n          } catch (error) {\n              if (error.message.includes('Update is not a fast forward') && i < maxRetries - 1) {\n                  console.warn(`Non-fast-forward update detected for branch ${targetBranch}. Retrying... (Attempt ${i + 1}/${maxRetries})`);\n                  // Ensure 'delay' utility is imported at the top of the file: import { delay } from '../utils/helpers.js';\n                  await delay(1000 * (i + 1)); // Exponential backoff\n              } else {\n                  throw error; // Re-throw if it's not a fast-forward error or max retries reached\n              }\n          }\n      }\n  }",
-            "explanation": "Implement a retry mechanism with exponential backoff in the `commitFile` method. This will re-fetch the latest branch SHA and re-attempt the commit if a 'non-fast-forward' error occurs due to concurrent updates. Additionally, add `import { delay } from '../utils/helpers.js';` at the top of this file to enable the retry logic."
-          }
-        ]
-      },
-      "metadata": {
-        "type": "analysis",
-        "iteration": 1
-      }
     }
   ],
-  "updated": "2026-03-01T18:40:58.644Z"
+  "updated": "2026-03-01T18:41:13.489Z"
 }
