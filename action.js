@@ -8,6 +8,7 @@ import { BranchManager } from './src/github/branch-manager.js';
 import { WorkflowManager } from './src/workflow/manager.js';
 
 async function run() {
+  return;
   let config;
   const CENTRAL_REPO = 'alphaleadership/kanbanaction';
 
